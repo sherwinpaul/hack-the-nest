@@ -6,153 +6,179 @@
   <title>Trip Guardian</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
 </head>
 <body>
-  <div class="noise"></div>
-
-  <header class="topbar">
-    <div class="brand">
-      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
-        <circle cx="20" cy="20" r="17" />
-        <circle cx="20" cy="20" r="10" />
-        <path d="M20 20 L20 3" class="sweep" />
-        <circle cx="27" cy="12" r="2.2" class="blip" />
-      </svg>
-      <div>
-        <div class="wordmark">TRIP&nbsp;GUARDIAN</div>
-        <div class="tagline">protects the meeting, not just the flight</div>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="logo" href="/">
+        <span class="logo-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 2.5 4 5.5v6c0 5 3.4 8.9 8 10 4.6-1.1 8-5 8-10v-6l-8-3Z"/><path d="m8.5 12.5 2.4 2.4 4.6-5.3"/></svg>
+        </span>
+        <span>Trip Guardian</span>
+      </a>
+      <div class="nav-right">
+        <span class="env" id="env"><i></i><span id="env-label">Replay</span></span>
+        <button class="btn btn-primary" id="engage">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          <span id="engage-label">Run guardian</span>
+        </button>
       </div>
-    </div>
-
-    <div class="mission">
-      <span class="label">PROTECTING</span>
-      <span id="mission-title" class="mission-title">—</span>
-    </div>
-
-    <div class="top-right">
-      <div class="countdown">
-        <span class="label">ARRIVE-BY IN</span>
-        <span id="countdown" class="mono">--:--:--</span>
-      </div>
-      <span id="mode-chip" class="chip">REPLAY</span>
-      <button id="engage" class="engage">
-        <span class="engage-dot"></span><span id="engage-label">ENGAGE GUARDIAN</span>
-      </button>
     </div>
   </header>
 
-  <section class="annunciators" id="annunciators" aria-label="Agent status"></section>
+  <main class="page">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="card commitment">
+        <div class="eyebrow">Protecting</div>
+        <h1 id="c-title">—</h1>
+        <div class="c-where" id="c-where">—</div>
+        <dl class="facts">
+          <div><dt>Arrive by</dt><dd id="c-deadline">—</dd></div>
+          <div><dt>Time left</dt><dd id="c-countdown">—</dd></div>
+          <div><dt>At stake</dt><dd id="c-stake">—</dd></div>
+          <div><dt>Extra budget</dt><dd id="c-budget">—</dd></div>
+        </dl>
+      </div>
 
-  <main class="grid">
-    <!-- Radar map -->
-    <section class="panel radar-panel">
-      <div class="panel-head">
-        <h2>RISK CORRIDOR</h2>
-        <div class="legend">
-          <span><i class="lg lg-current"></i>booked route</span>
-          <span><i class="lg lg-pick"></i>guardian pick</span>
-          <span><i class="lg lg-alt"></i>alternatives</span>
-          <span><i class="lg lg-storm"></i>disruption cell</span>
+      <div class="card reco" id="reco">
+        <div class="reco-head">
+          <span class="pill pill-blue">Guardian recommendation</span>
+          <span class="muted small" id="reco-source"></span>
+        </div>
+        <h2 id="reco-title">—</h2>
+        <p class="reco-sub" id="reco-sub">—</p>
+        <div class="compare">
+          <div class="cmp-row">
+            <span class="cmp-label">Current booking</span>
+            <span class="cmp-bar"><i id="cmp-cur"></i></span>
+            <span class="cmp-val" id="cmp-cur-val">—</span>
+          </div>
+          <div class="cmp-row">
+            <span class="cmp-label">Recommended</span>
+            <span class="cmp-bar"><i id="cmp-pick" class="good"></i></span>
+            <span class="cmp-val" id="cmp-pick-val">—</span>
+          </div>
+        </div>
+        <div class="reco-metrics">
+          <div><span class="m-val" id="m-extra">—</span><span class="m-label">Extra cost</span></div>
+          <div><span class="m-val good" id="m-saved">—</span><span class="m-label">Expected loss avoided</span></div>
+          <div><span class="m-val" id="m-avoid">—</span><span class="m-label">Risk avoided</span></div>
+        </div>
+        <div class="reco-actions">
+          <button class="btn btn-primary" id="reco-book">Review &amp; book</button>
+          <a class="btn btn-ghost" href="#options">Compare all options</a>
         </div>
       </div>
-      <div class="radar-wrap">
-        <div class="radar-sweep"></div>
-        <svg id="radar" viewBox="0 0 800 440" preserveAspectRatio="xMidYMid meet"></svg>
+    </section>
+
+    <!-- Pipeline -->
+    <section class="card pipeline-card">
+      <div class="card-head">
+        <h3>Agent pipeline</h3>
+        <span class="status-chip" id="run-status">Idle</span>
+      </div>
+      <ol class="pipeline" id="pipeline"></ol>
+    </section>
+
+    <!-- Map + risk -->
+    <section class="grid-2">
+      <div class="card map-card">
+        <div class="card-head">
+          <h3>Route risk</h3>
+          <div class="legend">
+            <span><i class="lg lg-cur"></i>Current booking</span>
+            <span><i class="lg lg-pick"></i>Recommended</span>
+            <span><i class="lg lg-alt"></i>Alternatives</span>
+          </div>
+        </div>
+        <div class="map-wrap"><svg id="map" viewBox="0 0 800 420" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of route options and airport risk"></svg></div>
+      </div>
+      <div class="card risk-card">
+        <div class="card-head"><h3>Airport conditions</h3><span class="muted small" id="risk-note"></span></div>
+        <ul class="risk-list" id="risk-list"></ul>
       </div>
     </section>
 
-    <!-- Stakes + dials -->
-    <section class="panel stakes-panel">
-      <div class="panel-head"><h2>AT STAKE</h2></div>
-      <div class="stakes">
-        <div class="stake-value mono" id="stake-value">$0</div>
-        <div class="stake-sub" id="stake-sub">—</div>
-        <div class="stake-meta">
-          <div><span class="label">DESTINATION</span><span id="stake-dest" class="mono">—</span></div>
-          <div><span class="label">ARRIVE BY</span><span id="stake-deadline" class="mono">—</span></div>
-          <div><span class="label">EXTRA BUDGET</span><span id="stake-budget" class="mono">—</span></div>
+    <!-- Options -->
+    <section>
+      <div class="card" id="options">
+        <div class="card-head">
+          <h3>Options</h3>
+          <span class="muted small">Ranked by expected loss: (1 − on-time chance) × stakes + fare</span>
+        </div>
+        <div class="table-wrap">
+          <table class="options">
+            <thead>
+              <tr>
+                <th>Flight</th><th>Route</th><th>Departs</th><th>Arrives</th>
+                <th>On-time chance</th><th class="num">Price</th><th class="num">Expected loss</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="options-body"></tbody>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span id="selected-label" class="muted">Select an option</span>
+          <button class="btn btn-primary" id="approve" disabled>Book selected</button>
         </div>
       </div>
-      <div class="dials">
-        <figure class="dial" id="dial-current"></figure>
-        <div class="dial-arrow">→</div>
-        <figure class="dial" id="dial-pick"></figure>
+    </section>
+
+    <!-- Activity + evidence -->
+    <section class="grid-2 grid-2-act">
+      <div class="card activity-card">
+        <div class="card-head"><h3>Activity</h3><span class="muted small" id="activity-count"></span></div>
+        <ol class="activity" id="activity">
+          <li class="empty">Run the guardian to see each agent and tool call as it happens.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3>Web evidence</h3>
+          <span class="pill pill-violet">Searched with Exa</span>
+        </div>
+        <div class="evidence" id="evidence">
+          <p class="empty">Sources the Web Intel agent finds appear here.</p>
+        </div>
       </div>
     </section>
 
-    <!-- Flight recorder -->
-    <section class="panel recorder-panel">
-      <div class="panel-head">
-        <h2>FLIGHT RECORDER</h2>
-        <span class="rec" id="rec-indicator"><i></i>STANDBY</span>
+    <!-- Brief + message -->
+    <section class="grid-2 grid-2-even">
+      <div class="card">
+        <div class="card-head"><h3>Guardian brief</h3></div>
+        <article class="prose" id="brief"><p class="empty">The full reasoning, with evidence, appears here after a run.</p></article>
       </div>
-      <ol class="recorder" id="recorder">
-        <li class="rec-empty">
-          Engage the guardian to watch the agents plan, search and decide in real time.
-        </li>
-      </ol>
-    </section>
-
-    <!-- Departure board -->
-    <section class="panel board-panel">
-      <div class="panel-head">
-        <h2>DEPARTURE BOARD</h2>
-        <span class="hint">ranked by expected loss = (1 − P on time) × stakes + fare</span>
-      </div>
-      <div class="board" id="board" role="table"></div>
-      <div class="board-actions">
-        <div class="selected" id="selected-label">Select an option</div>
-        <button class="approve" id="approve" disabled>APPROVE &amp; BOOK</button>
+      <div class="card">
+        <div class="card-head">
+          <h3>Message to host</h3>
+          <button class="btn btn-ghost btn-sm" id="copy-host" disabled>Copy</button>
+        </div>
+        <textarea id="host-msg" class="host-msg" placeholder="Drafted by the Comms agent during a run. Edit before sending." spellcheck="true"></textarea>
       </div>
     </section>
 
-    <!-- Live web evidence (Exa) -->
-    <section class="panel evidence-panel">
-      <div class="panel-head">
-        <h2>LIVE WEB EVIDENCE</h2>
-        <span class="exa-badge"><i></i>SEARCHED VIA EXA</span>
-      </div>
-      <div class="evidence" id="evidence">
-        <p class="ev-empty">Sources the Web Intel agent finds on the live web appear here, each one clickable.</p>
-      </div>
-    </section>
-
-    <!-- Brief -->
-    <section class="panel brief-panel">
-      <div class="panel-head"><h2>GUARDIAN BRIEF</h2></div>
-      <article class="brief" id="brief">
-        <p class="muted">The recommendation and its evidence appear here after a run.</p>
-      </article>
-    </section>
-
-    <!-- Host message -->
-    <section class="panel host-panel">
-      <div class="panel-head">
-        <h2>MESSAGE TO HOST</h2>
-        <button class="ghost" id="copy-host" disabled>COPY</button>
-      </div>
-      <textarea id="host-msg" class="host-msg" placeholder="The Comms agent drafts this during a run. You can edit it before sending." spellcheck="true"></textarea>
-    </section>
+    <footer class="foot">Scoring is deterministic code; language models only gather evidence and explain. Nothing is booked without your approval.</footer>
   </main>
 
-  <dialog id="confirm" class="confirm">
+  <dialog id="confirm" class="dialog">
     <form method="dialog">
-      <div class="label">CONFIRM BOOKING</div>
+      <div class="eyebrow">Confirm booking</div>
       <h3 id="confirm-title">—</h3>
       <p id="confirm-body" class="muted">—</p>
-      <div class="confirm-actions">
-        <button value="cancel" class="ghost">CANCEL</button>
-        <button value="ok" class="approve" id="confirm-ok">BOOK</button>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn btn-ghost">Cancel</button>
+        <button value="ok" class="btn btn-primary" id="confirm-ok">Confirm</button>
       </div>
     </form>
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
   <script src="/static/app.js"></script>
 </body>
 </html>

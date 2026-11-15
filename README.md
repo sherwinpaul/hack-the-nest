@@ -34,14 +34,13 @@ uv run pytest
 
 ## Dashboard
 
-A flight-deck style control room:
+A light, product-style dashboard:
 
-- **Risk corridor**: radar-scope map with pulsing disruption cells, the booked route (dashed red),
-  alternatives, and the guardian's pick (glowing, with a plane flying it)
-- **Agent annunciators**: one status lamp per agent, lit while it works
-- **Flight recorder**: live trace of every agent and tool call, streamed over SSE
-- **Departure board**: split-flap ranking by expected loss; select a row and approve to book
-- **Guardian brief** and an editable **message to host**
-
-`DATA_MODE=replay` uses `scenarios/storm_ord.json` (sample data) for a deterministic demo;
-`DATA_MODE=live` calls the real APIs and MCP servers.
+- **Recommendation**: the guardian's pick at a glance, with booked vs recommended on-time
+  chance, extra cost, expected loss avoided, and the risk it routes around
+- **Agent pipeline**: each agent's live status and the model it runs on
+- **Route risk map** and **airport conditions** with disruption probability and the reason
+- **Options**: ranked by expected loss, in each airport's local time; book the selection
+  (simulated in replay, kiwi.com link in live mode)
+- **Activity**: every agent and tool call, streamed live
+- **Web evidence**: Exa sources as cards; **guardian brief** and an editable **message to host**

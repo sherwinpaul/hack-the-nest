@@ -27,5 +27,10 @@ def test_parses_json_encoded_result():
     assert len(items) == 2 and items[1]["url"] == "https://www.united.com/en/us/travel-notices"
 
 
+def test_decodes_unicode_escapes_in_titles():
+    raw = json.dumps({"text": "Title: Denver, High 62°F – sunny\nURL: https://exa.ai/x\n"})
+    assert parse_exa_sources(raw)[0]["title"] == "Denver, High 62°F – sunny"
+
+
 def test_no_results():
     assert parse_exa_sources("No results found") == []

@@ -76,7 +76,7 @@ def parse_exa_sources(result: Any, limit: int = 8) -> list[dict]:
         seen.add(url)
         out.append(
             {
-                "title": m["title"].strip()[:160],
+                "title": _unescape(m["title"].strip())[:160],
                 "url": url,
                 "domain": urlparse(url).netloc.removeprefix("www."),
                 "published": (m["published"] or "")[:10],
@@ -85,6 +85,16 @@ def parse_exa_sources(result: Any, limit: int = 8) -> list[dict]:
         if len(out) >= limit:
             break
     return out
+
+
+def _unescape(text: str) -> str:
+    """Undo JSON escapes (\\u00b0, \\") left when the result arrived JSON-encoded."""
+    if "\\" not in text:
+        return text
+    try:
+        return json.loads('"' + text.replace('"', '\\"') + '"')
+    except ValueError:
+        return text
 
 
 def _query(args: str) -> str:

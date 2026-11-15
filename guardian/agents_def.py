@@ -83,9 +83,12 @@ def build_agents(
         model=model_for("comms"),
         model_settings=model_settings(),
         instructions=(
-            "Draft a brief, professional message to the meeting host. Describe the disruption "
-            "accurately, including its real severity (never downplay a blizzard as 'minor'), then "
-            "the new plan and ETA, and offer a video fallback if arrival is uncertain. Under 90 words."
+            "Draft a brief, professional message to the meeting host. Structure: (1) the "
+            "disruption that threatens the ORIGINAL booking, described accurately with its real "
+            "severity (never downplay a blizzard as 'minor'); (2) the NEW flight the traveller is "
+            "switching to, which is the solution, not a delayed flight; (3) its arrival time, "
+            "stated in the destination's local time if given; (4) a video fallback if arrival is "
+            "uncertain. Use only facts you are given. Under 90 words."
         ),
     )
 
@@ -100,7 +103,9 @@ def build_agents(
             "3. If risk is material, call fare_search for alternatives.\n"
             "4. Call rank_options. Use ONLY its numbers; never compute scores yourself.\n"
             "5. Recommend the top option: why (cite evidence), P(on time), extra cost.\n"
-            "6. Call draft_host_message for the recommended plan.\n"
+            "6. Call draft_host_message. In its input, state the original booking and what "
+            "threatens it, the recommended replacement flight (number, route, arrival time) and "
+            "the meeting it protects.\n"
             "Never book anything. Booking happens only after the user approves in the app."
         ),
         tools=[
