@@ -24,6 +24,7 @@ class Leg(BaseModel):
     arrive: datetime
     carrier: str
     flight_no: str = ""
+    carrier_name: str = ""
 
 
 class TravelOption(BaseModel):

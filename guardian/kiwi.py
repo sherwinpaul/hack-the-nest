@@ -72,6 +72,7 @@ def parse_itinerary(it: dict, origin_tz) -> TravelOption | None:
                 depart=dep_utc.replace(tzinfo=UTC),
                 arrive=arr_utc.replace(tzinfo=UTC),
                 carrier=seg.get("carrier", ""),
+                carrier_name=seg.get("carrierName", ""),
                 flight_no=_flight_no(seg),
             )
         )

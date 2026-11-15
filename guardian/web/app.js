@@ -48,7 +48,7 @@
   }
   function bestSummary() {
     const p = pick();
-    return p ? `Best option: ${flightNo(p.option)}, ${pct(p.p_on_time)} chance of arriving on time` : "Options ranked";
+    return p ? `Best option: ${airlineName(p.option)} ${flightNo(p.option)}, ${pct(p.p_on_time)} chance of arriving on time` : "Options ranked";
   }
   const AGENT_COLOR = {
     "Trip Guardian": "#2563eb", "Weather Risk": "#0ea5e9", "Web Intel": "#6d4fd8",
@@ -78,6 +78,18 @@
     return d ? `${d}d ${h}h` : h ? `${h}h ${mm}m` : `${mm}m`;
   }
   const flightNo = (o) => o.legs[0].flight_no || o.legs[0].carrier;
+
+  // Airline identity: name and logo (Kiwi's airline image service; code badge as fallback)
+  const carriersOf = (o) => [...new Set(o.legs.map((l) => l.carrier))];
+  const nameOf = (code) => state?.airlines?.[code] || code;
+  const airlineName = (o) => carriersOf(o).map(nameOf).join(" + ");
+  function airlineLogo(code, size = 30) {
+    const badge = `<span class="carrier" style="background:${carrierColor(code)};width:${size}px;height:${size}px" hidden>${esc(code)}</span>`;
+    return `<span class="al-logo" style="width:${size}px;height:${size}px">`
+      + `<img src="https://images.kiwi.com/airlines/64x64/${encodeURIComponent(code)}.png" alt="${esc(nameOf(code))}" width="${size}" height="${size}" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false">`
+      + `${badge}</span>`;
+  }
+  const airlineLogos = (o, size = 30) => `<span class="al-logos">${carriersOf(o).slice(0, 2).map((c) => airlineLogo(c, size)).join("")}</span>`;
   const via = (o) => (o.legs.length > 1 ? `via ${o.airports.slice(1, -1).join(", ")}` : "Nonstop");
   const carrierColor = (c) => {
     const palette = ["#2563eb", "#0d9488", "#7c3aed", "#db2777", "#ea580c", "#0891b2", "#4f46e5", "#16a34a"];
@@ -116,9 +128,10 @@
     // A small gain earns a softer verb: the guardian should not cry wolf.
     const gain = p.p_on_time - (cur ? cur.p_on_time : 0);
     const verb = gain >= 0.1 ? "Switch to" : "Consider switching to";
-    $("#reco-title").textContent = isCurrent ? "Keep your current booking" : `${verb} ${flightNo(o)} ${via(o).toLowerCase() === "nonstop" ? "nonstop" : via(o)}`;
+    const titleText = isCurrent ? "Keep your current booking" : `${verb} ${airlineName(o)} ${via(o).toLowerCase() === "nonstop" ? "nonstop" : via(o)}`;
+    $("#reco-title").innerHTML = `${airlineLogos(o, 36)}<span>${esc(titleText)}</span>`;
     const slack = new Date(state.commitment.must_arrive_by) - new Date(o.arrive);
-    $("#reco-sub").textContent = `Lands ${local(o.arrive, o.airports.at(-1))} · ${span(slack)} before your deadline · ${usd(o.price_usd)}`;
+    $("#reco-sub").textContent = `${o.legs.map((l) => l.flight_no).join(" · ")} · Lands ${local(o.arrive, o.airports.at(-1))} · ${span(slack)} before your deadline · ${usd(o.price_usd)}`;
     $("#reco-source").textContent = o.source === "kiwi" ? "Live fare from Kiwi.com" : state.mode === "replay" ? "Sample fare" : `Fare via ${o.source}`;
     const curP = cur ? cur.p_on_time : 0;
     $("#cmp-pick").closest(".cmp-row").hidden = isCurrent; // one bar is enough when nothing changes
@@ -149,7 +162,7 @@
       .map(([tag, label]) => [label, state.ranking.find((r) => r.tags.includes(tag))])
       .filter(([, r]) => r && r.option.id !== o.id);
     $("#alts").innerHTML = chips.map(([label, r]) =>
-      `<button class="alt-chip" data-id="${esc(r.option.id)}">${label}: <b>${esc(flightNo(r.option))}</b> ${usd(r.option.price_usd)} · ${pct(r.p_on_time)} on time</button>`).join("");
+      `<button class="alt-chip" data-id="${esc(r.option.id)}">${airlineLogos(r.option, 18)}${label}: <b>${esc(airlineName(r.option))}</b> ${usd(r.option.price_usd)} · ${pct(r.p_on_time)} on time</button>`).join("");
     document.querySelectorAll(".alt-chip").forEach((b) => b.addEventListener("click", () => {
       select(b.dataset.id);
       $("#options").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -471,10 +484,9 @@
     if (!rows.some((r) => r.option.id === state.current_trip.id) && current()) rows.push(current());
     $("#options-body").innerHTML = rows.map((r) => {
       const o = r.option, i = state.ranking.indexOf(r);
-      const carrier = o.legs[0].carrier;
       return `<tr data-id="${esc(o.id)}" class="${o.id === selectedId ? "selected" : ""}">
-        <td><span class="flight"><span class="carrier" style="background:${carrierColor(carrier)}">${esc(carrier)}</span>
-          <span><b>${esc(flightNo(o))}</b><span class="sub">${esc(o.legs.length > 1 ? o.legs.map((l) => l.flight_no).slice(1).join(", ") : o.source === "kiwi" && state.mode === "live" ? "Kiwi.com" : "")}</span></span></span></td>
+        <td><span class="flight">${airlineLogos(o)}
+          <span><b>${esc(airlineName(o))}</b><span class="sub">${esc(o.legs.map((l) => l.flight_no).join(" · "))}</span></span></span></td>
         <td>${esc(o.airports.join(" → "))}<span class="sub">${esc(via(o))}</span></td>
         <td>${esc(local(o.legs[0].depart, o.airports[0], false))}</td>
         <td>${esc(local(o.arrive, o.airports.at(-1), false))}</td>
@@ -501,7 +513,7 @@
     const btn = $("#approve");
     if (!r) { $("#selected-label").textContent = "Select an option"; btn.disabled = true; return; }
     const isCurrent = r.option.id === state.current_trip.id;
-    $("#selected-label").innerHTML = `<b>${esc(flightNo(r.option))}</b> · ${esc(r.option.airports.join(" → "))} · ${pct(r.p_on_time)} on time · ${usd(r.option.price_usd)}`;
+    $("#selected-label").innerHTML = `<b>${esc(airlineName(r.option))}</b> ${esc(flightNo(r.option))} · ${esc(r.option.airports.join(" → "))} · ${pct(r.p_on_time)} on time · ${usd(r.option.price_usd)}`;
     btn.disabled = isCurrent || r.p_on_time === 0;
     btn.textContent = isCurrent ? "Already booked" : state.payments?.enabled ? "Book & pay" : r.option.source === "kiwi" && state.mode === "live" ? "Book on Kiwi.com" : "Book selected";
   }
@@ -511,7 +523,7 @@
     const r = byId(id);
     if (!r) return;
     const o = r.option;
-    $("#confirm-title").textContent = `${flightNo(o)} · ${o.airports.join(" → ")}`;
+    $("#confirm-title").textContent = `${airlineName(o)} ${flightNo(o)} · ${o.airports.join(" → ")}`;
     const how = o.source === "kiwi"
       ? "You'll finish the purchase on Kiwi.com. Trip Guardian never takes payment."
       : state.mode === "replay" ? "Replay mode: this booking is simulated." : "Duffel test mode only.";
@@ -573,7 +585,7 @@
     if (!r || co.busy) return;
     co.busy = true;
     const dlg = coDlg();
-    $("#co-title").textContent = `${flightNo(r.option)} · ${r.option.airports.join(" → ")}`;
+    $("#co-title").textContent = `${airlineName(r.option)} ${flightNo(r.option)} · ${r.option.airports.join(" → ")}`;
     $("#co-summary").innerHTML = '<span class="muted">Checking live availability and the latest price…</span>';
     $("#co-note").hidden = true;
     $("#co-details-error").textContent = "";

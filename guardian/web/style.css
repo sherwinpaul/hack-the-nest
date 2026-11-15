@@ -217,6 +217,19 @@ table.options { width: 100%; border-collapse: separate; border-spacing: 0; font-
 .flight { display: flex; align-items: center; gap: 10px; }
 .carrier { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; flex: none; }
 .flight b { font-weight: 650; }
+/* Airline logos (with a code badge fallback) */
+.al-logos { display: inline-flex; align-items: center; flex: none; }
+.al-logo {
+  display: inline-grid; place-items: center; flex: none; border-radius: 8px; overflow: hidden;
+  background: #fff; box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgba(16, 24, 40, 0.06);
+}
+.al-logo img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.al-logo .carrier { border-radius: 0; font-size: 10.5px; }
+.al-logo [hidden] { display: none !important; }
+.al-logos .al-logo + .al-logo { margin-left: -9px; box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--line); }
+#reco-title { display: flex; align-items: center; gap: 12px; }
+#reco-title .al-logo { border-radius: 10px; }
+.alt-chip .al-logo { border-radius: 5px; }
 .sub { display: block; font-size: 12.5px; color: var(--ink-3); }
 .ontime { display: flex; align-items: center; gap: 10px; min-width: 140px; }
 .ontime .bar { flex: 1; height: 6px; border-radius: 999px; background: #f0f2f5; overflow: hidden; }

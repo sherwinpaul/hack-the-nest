@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 from guardian import booking, data, duffel, kiwi, payments
 from guardian.agents_def import build_agents
-from guardian.airports import AIRPORT_COORDS, AIRPORTS, CITY
+from guardian.airports import AIRLINES, AIRPORT_COORDS, AIRPORTS, CITY
 from guardian.config import settings
 from guardian.mcp_servers import connect_all
 from guardian.models import configure_tracing, describe_routing
@@ -75,6 +75,16 @@ async def state(priority: str | None = None) -> dict[str, Any]:
     return await asyncio.to_thread(_build_state)
 
 
+def _airline_names(ranking: list[dict]) -> dict[str, str]:
+    """Display name per carrier code: names Kiwi sent with the fare win, then our table."""
+    names: dict[str, str] = {}
+    for r in ranking:
+        for leg in r["option"]["legs"]:
+            code = leg["carrier"]
+            names[code] = leg.get("carrier_name") or names.get(code) or AIRLINES.get(code, code)
+    return names
+
+
 def _build_state() -> dict[str, Any]:
     c = data.load_commitment()
     trip = data.load_current_trip()
@@ -87,6 +97,7 @@ def _build_state() -> dict[str, Any]:
         "coords": {a: AIRPORT_COORDS.get(a) for a in airports},
         "tz": {a: AIRPORTS[a][2] for a in airports if a in AIRPORTS},
         "cities": {a: CITY.get(a, a) for a in airports},
+        "airlines": _airline_names(ranking),
         "commitment": c.model_dump(mode="json"),
         "current_trip": trip.model_dump(mode="json"),
         "risks": {

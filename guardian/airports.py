@@ -78,3 +78,15 @@ CITY = {
     "SEA": "Seattle", "SFO": "San Francisco", "SLC": "Salt Lake City", "STL": "St. Louis",
     "TPA": "Tampa",
 }
+
+
+# Airline display names by IATA code (live Kiwi fares also carry their own names)
+AIRLINES = {
+    "AA": "American Airlines", "AC": "Air Canada", "AF": "Air France", "AM": "Aeroméxico",
+    "AS": "Alaska Airlines", "B6": "JetBlue", "BA": "British Airways", "DL": "Delta Air Lines",
+    "F9": "Frontier Airlines", "G4": "Allegiant Air", "HA": "Hawaiian Airlines", "KL": "KLM",
+    "LH": "Lufthansa", "MX": "Breeze Airways", "NK": "Spirit Airlines", "QX": "Horizon Air",
+    "SY": "Sun Country Airlines", "UA": "United Airlines", "WN": "Southwest Airlines",
+    "WS": "WestJet", "XP": "Avelo Airlines", "YX": "Republic Airways", "OO": "SkyWest Airlines",
+    "9E": "Endeavor Air", "MQ": "Envoy Air", "ZZ": "Duffel Airways",
+}
