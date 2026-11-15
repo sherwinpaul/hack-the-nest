@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 from guardian import booking, data, duffel, kiwi, payments
 from guardian.agents_def import build_agents
-from guardian.airports import AIRPORT_COORDS, AIRPORTS
+from guardian.airports import AIRPORT_COORDS, AIRPORTS, CITY
 from guardian.config import settings
 from guardian.mcp_servers import connect_all
 from guardian.models import configure_tracing, describe_routing
@@ -86,6 +86,7 @@ def _build_state() -> dict[str, Any]:
         "routing": describe_routing(),
         "coords": {a: AIRPORT_COORDS.get(a) for a in airports},
         "tz": {a: AIRPORTS[a][2] for a in airports if a in AIRPORTS},
+        "cities": {a: CITY.get(a, a) for a in airports},
         "commitment": c.model_dump(mode="json"),
         "current_trip": trip.model_dump(mode="json"),
         "risks": {

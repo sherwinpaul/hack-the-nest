@@ -224,7 +224,7 @@
     const dx = b[0] - a[0], dy = b[1] - a[1];
     return `Q ${(mx - dy * bend).toFixed(1)} ${(my + dx * bend).toFixed(1)} ${b[0].toFixed(1)} ${b[1].toFixed(1)}`;
   }
-  function renderMap() {
+  function renderBasicMap() {
     const svg = $("#map");
     svg.innerHTML = "";
     const W = 800, H = 420;
@@ -289,6 +289,150 @@
       rt.textContent = pct(risk);
     }
   }
+  // ---------- geographic map (D3 + US Atlas), with the basic map as fallback ----------
+  const GEO_LIBS = [
+    "https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js",
+    "https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js",
+  ];
+  const US_ATLAS = "https://cdn.jsdelivr.net/npm/us-atlas@3.0.1/states-10m.json";
+  let geo = null; // { land, borders } once loaded
+  let geoLoading = null;
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src; s.onload = resolve; s.onerror = () => reject(new Error(`Could not load ${src}`));
+      document.head.appendChild(s);
+    });
+  }
+  function loadGeo() {
+    geoLoading ??= (async () => {
+      for (const src of GEO_LIBS) if (!(src.includes("/d3@") ? window.d3 : window.topojson)) await loadScript(src);
+      const us = await (await fetch(US_ATLAS)).json();
+      geo = {
+        land: topojson.feature(us, us.objects.nation),
+        borders: topojson.mesh(us, us.objects.states, (a, b) => a !== b),
+      };
+    })();
+    return geoLoading;
+  }
+
+  function renderMap() {
+    if (geo) return renderGeoMap();
+    renderBasicMap();
+    loadGeo().then(() => state && renderGeoMap()).catch(() => { /* offline: keep the basic map */ });
+  }
+
+  function renderGeoMap() {
+    const W = 800, H = 420;
+    const svg = d3.select("#map");
+    svg.selectAll("*").remove();
+    const codes = Object.keys(state.coords).filter((c) => state.coords[c]);
+    const lonlat = (c) => [state.coords[c][1], state.coords[c][0]];
+    const projection = d3.geoAlbers().fitExtent([[110, 78], [W - 110, H - 58]], { type: "MultiPoint", coordinates: codes.map(lonlat) });
+    const path = d3.geoPath(projection);
+    const P = (c) => projection(lonlat(c));
+
+    const defs = svg.append("defs");
+    const sea = defs.append("linearGradient").attr("id", "g-sea").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 1);
+    sea.append("stop").attr("offset", 0).attr("stop-color", "#e3eefc");
+    sea.append("stop").attr("offset", 1).attr("stop-color", "#f3f7fd");
+    for (const [id, color] of [["g-red", "#dc3545"], ["g-amber", "#e8890c"]]) {
+      const g = defs.append("radialGradient").attr("id", id);
+      g.append("stop").attr("offset", "0%").attr("stop-color", color).attr("stop-opacity", 0.42);
+      g.append("stop").attr("offset", "55%").attr("stop-color", color).attr("stop-opacity", 0.16);
+      g.append("stop").attr("offset", "100%").attr("stop-color", color).attr("stop-opacity", 0);
+    }
+    const glow = defs.append("filter").attr("id", "g-glow").attr("x", "-20%").attr("y", "-20%").attr("width", "140%").attr("height", "140%");
+    glow.append("feGaussianBlur").attr("stdDeviation", 3.5);
+    const shadow = defs.append("filter").attr("id", "g-land").attr("x", "-5%").attr("y", "-5%").attr("width", "110%").attr("height", "115%");
+    shadow.append("feDropShadow").attr("dx", 0).attr("dy", 3).attr("stdDeviation", 5).attr("flood-color", "#1e3a8a").attr("flood-opacity", 0.12);
+
+    // Base map: sea, graticule, land, state borders
+    svg.append("rect").attr("width", W).attr("height", H).attr("fill", "url(#g-sea)");
+    svg.append("path").attr("class", "grat").attr("d", path(d3.geoGraticule10()));
+    svg.append("path").attr("class", "land").attr("d", path(geo.land)).attr("filter", "url(#g-land)");
+    svg.append("path").attr("class", "borders").attr("d", path(geo.borders));
+
+    // Weather cells, like radar returns: layered, sized by risk, gently pulsing
+    for (const [code, r] of Object.entries(state.risks)) {
+      if (!state.coords[code] || r.disruption_prob < 0.2) continue;
+      const [x, y] = P(code);
+      const R = 28 + 120 * r.disruption_prob;
+      const cell = svg.append("g").attr("class", "cell");
+      const fill = r.disruption_prob >= 0.5 ? "url(#g-red)" : "url(#g-amber)";
+      cell.append("circle").attr("cx", x).attr("cy", y).attr("r", R).attr("fill", fill);
+      cell.append("circle").attr("cx", x + R * 0.18).attr("cy", y - R * 0.1).attr("r", R * 0.6).attr("fill", fill);
+      cell.append("circle").attr("cx", x - R * 0.12).attr("cy", y + R * 0.08).attr("r", R * 0.34).attr("fill", fill);
+    }
+
+    // Routes: alternatives, then the current booking, then the recommendation on top
+    const pid = pick()?.option.id, cid = state.current_trip.id;
+    const shown = state.ranking.slice(0, 8);
+    if (!shown.some((r) => r.option.id === cid) && current()) shown.push(current());
+    const rank = (r) => (r.option.id === pid ? 2 : r.option.id === cid ? 1 : 0);
+    shown.sort((a, b) => rank(a) - rank(b)).forEach((r) => {
+      const o = r.option;
+      if (o.airports.some((a) => !state.coords[a])) return;
+      const idx = state.ranking.indexOf(r);
+      const bend = o.id === pid ? -0.16 : (idx % 2 ? -1 : 1) * (0.06 + 0.04 * Math.floor(idx / 2));
+      let d = "";
+      o.legs.forEach((leg, i) => {
+        const a = P(leg.origin), b = P(leg.destination);
+        if (i === 0) d += `M ${a[0].toFixed(1)} ${a[1].toFixed(1)} `;
+        d += curve(a, b, bend) + " ";
+      });
+      const cls = o.id === pid ? "pick" : o.id === cid ? "cur" : "alt";
+      if (cls === "pick") svg.append("path").attr("class", "route-glow").attr("d", d).attr("filter", "url(#g-glow)");
+      svg.append("path").attr("class", `route ${cls}`).attr("id", `r-${o.id}`).attr("data-id", o.id).attr("d", d);
+      if (cls === "pick") svg.append("path").attr("class", "flow").attr("d", d);
+    });
+
+    if (pid && document.getElementById(`r-${pid}`)) {
+      const plane = svg.append("path").attr("class", "plane")
+        .attr("d", "M-9 -1.8 L6 -1.8 L10.5 0 L6 1.8 L-9 1.8 L-6.5 0 Z M-1 -1.8 L-5 -8.5 L-2 -8.5 L4.5 -1.8 Z M-1 1.8 L-5 8.5 L-2 8.5 L4.5 1.8 Z M-9 -1.8 L-11.5 -5 L-9.5 -5 L-6.5 -1.8 Z M-9 1.8 L-11.5 5 L-9.5 5 L-6.5 1.8 Z");
+      plane.append("animateMotion").attr("dur", "6s").attr("repeatCount", "indefinite").attr("rotate", "auto")
+        .append("mpath").attr("href", `#r-${pid}`);
+    }
+
+    // Airports and labels (placed to avoid overlapping each other)
+    const origin = state.current_trip.airports[0], dest = state.commitment.airport;
+    const placed = [];
+    const overlaps = (b) => placed.some((p) => !(b.x2 < p.x1 || b.x1 > p.x2 || b.y2 < p.y1 || b.y1 > p.y2));
+    for (const code of codes) {
+      const [x, y] = P(code);
+      const risk = state.risks[code]?.disruption_prob ?? 0;
+      const end = code === origin || code === dest;
+      svg.append("circle").attr("cx", x).attr("cy", y).attr("r", end ? 7.5 : 6).attr("class", "ap-ring").attr("stroke", end ? "#2563eb" : rColor(risk));
+      svg.append("circle").attr("cx", x).attr("cy", y).attr("r", end ? 3 : 2.4).attr("fill", end ? "#2563eb" : rColor(risk));
+
+      const g = svg.append("g").attr("class", "ap-label");
+      const rect = g.append("rect").attr("rx", 9);
+      const t1 = g.append("text").attr("class", "code").text(code);
+      const t2 = g.append("text").attr("class", "city").text(state.cities?.[code] || "");
+      const t3 = g.append("text").attr("class", "risk").attr("fill", rColor(risk)).text(pct(risk));
+      const w1 = t1.node().getComputedTextLength(), w2 = t2.node().getComputedTextLength(), w3 = t3.node().getComputedTextLength();
+      const w = 12 + w1 + 6 + w2 + 8 + w3 + 12, h = 26;
+      const spots = [[-w / 2, -h - 14], [-w / 2, 14], [14, -h / 2], [-w - 14, -h / 2]];
+      let [ox, oy] = spots[0];
+      for (const [sx, sy] of spots) {
+        const b = { x1: x + sx, y1: y + sy, x2: x + sx + w, y2: y + sy + h };
+        if (!overlaps(b) && b.x1 > 4 && b.x2 < W - 4 && b.y1 > 4 && b.y2 < H - 4) { [ox, oy] = [sx, sy]; break; }
+      }
+      placed.push({ x1: x + ox, y1: y + oy, x2: x + ox + w, y2: y + oy + h });
+      g.attr("transform", `translate(${(x + ox).toFixed(1)}, ${(y + oy).toFixed(1)})`);
+      rect.attr("width", w).attr("height", h);
+      t1.attr("x", 12).attr("y", 17.5);
+      t2.attr("x", 12 + w1 + 6).attr("y", 17.5);
+      t3.attr("x", w - 12).attr("y", 17.5).attr("text-anchor", "end");
+      if (end) {
+        const tag = g.append("g").attr("class", "end-tag").attr("transform", `translate(${w / 2 - 19}, -9)`);
+        tag.append("rect").attr("width", 38).attr("height", 15).attr("rx", 7.5);
+        tag.append("text").attr("x", 19).attr("y", 10.8).attr("text-anchor", "middle").text(code === origin ? "FROM" : "TO");
+      }
+    }
+  }
+
   function highlight(id) {
     document.querySelectorAll("#map .route:not(.pick-glow)").forEach((p) => {
       p.classList.toggle("hl", !!id && p.dataset.id === id && !p.classList.contains("pick"));

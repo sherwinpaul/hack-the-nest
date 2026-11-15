@@ -61,3 +61,20 @@ AIRPORT_COORDS = {code: (lat, lon) for code, (lat, lon, _) in AIRPORTS.items()}
 def tz_for(code: str) -> ZoneInfo | None:
     entry = AIRPORTS.get(code)
     return ZoneInfo(entry[2]) if entry else None
+
+
+# Short display names for the map labels
+CITY = {
+    "ATL": "Atlanta", "AUS": "Austin", "BNA": "Nashville", "BOS": "Boston", "BWI": "Baltimore",
+    "CLE": "Cleveland", "CLT": "Charlotte", "CMH": "Columbus", "CVG": "Cincinnati",
+    "COS": "Colorado Springs", "DAL": "Dallas Love", "DCA": "Washington", "DEN": "Denver",
+    "DFW": "Dallas–Fort Worth", "DTW": "Detroit", "EWR": "Newark", "FLL": "Fort Lauderdale",
+    "HOU": "Houston Hobby", "IAD": "Washington Dulles", "IAH": "Houston", "IND": "Indianapolis",
+    "JFK": "New York JFK", "LAS": "Las Vegas", "LAX": "Los Angeles", "LGA": "New York LaGuardia",
+    "MCI": "Kansas City", "MCO": "Orlando", "MDW": "Chicago Midway", "MIA": "Miami",
+    "MKE": "Milwaukee", "MSP": "Minneapolis", "MSY": "New Orleans", "OMA": "Omaha",
+    "ORD": "Chicago O'Hare", "PDX": "Portland", "PHL": "Philadelphia", "PHX": "Phoenix",
+    "PIT": "Pittsburgh", "RDU": "Raleigh–Durham", "SAN": "San Diego", "SAT": "San Antonio",
+    "SEA": "Seattle", "SFO": "San Francisco", "SLC": "Salt Lake City", "STL": "St. Louis",
+    "TPA": "Tampa",
+}

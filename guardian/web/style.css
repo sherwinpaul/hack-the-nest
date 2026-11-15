@@ -179,6 +179,21 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.02em; }
 #map .ap-label text { font: 600 12px var(--font); fill: var(--ink); }
 #map .ap-label .risk { font: 500 11px var(--font); }
 #map .plane { fill: var(--blue); }
+/* Geographic map */
+#map .grat { fill: none; stroke: rgba(37, 99, 235, 0.07); stroke-width: 1; }
+#map .land { fill: #ffffff; }
+#map .borders { fill: none; stroke: #d5deeb; stroke-width: 0.9; stroke-linejoin: round; }
+#map .cell { animation: breathe 3.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+#map .route-glow { fill: none; stroke: var(--blue); stroke-width: 9; opacity: 0.22; stroke-linecap: round; }
+#map .flow { fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-dasharray: 1.5 14; opacity: 0.95; animation: route-flow 1.4s linear infinite; pointer-events: none; }
+@keyframes route-flow { to { stroke-dashoffset: -31; } }
+#map .route.alt { stroke: #a9b6c9; stroke-width: 1.5; opacity: 0.7; }
+#map .ap-label rect { fill: rgba(255, 255, 255, 0.96); stroke: #dfe5ee; filter: drop-shadow(0 2px 4px rgba(16, 24, 40, 0.08)); }
+#map .ap-label .code { font: 700 12px var(--font); fill: var(--ink); }
+#map .ap-label .city { font: 500 11.5px var(--font); fill: var(--ink-2); }
+#map .end-tag rect { fill: var(--blue); }
+#map .end-tag text { font: 700 9px var(--font); letter-spacing: 0.08em; fill: #fff; }
+.map-wrap { background: #eef4fc; }
 
 .risk-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .risk-item { display: grid; grid-template-columns: 48px 1fr 46px; gap: 12px; align-items: center; padding: 10px 6px; border-bottom: 1px solid var(--line-2); }
