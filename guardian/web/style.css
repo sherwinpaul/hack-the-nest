@@ -363,38 +363,26 @@ table.options { width: 100%; border-collapse: separate; border-spacing: 0; font-
 }
 @media (prefers-reduced-motion: reduce) {
   .cloud { transform: translateX(var(--x)); } /* still sky: clouds placed, not moving */
-  .flight { display: none; }
+  .flights { display: none; }
 }
 
-/* Occasional airliner fly-by with a fading contrail. Each cycle is long:
-   the crossing takes the first part, then the plane waits off-screen. */
-.flight {
-  position: absolute; left: 0; display: flex; align-items: center;
-  transform: translateX(-30vw); will-change: transform;
-}
-.flight .jet { display: block; width: 92px; filter: drop-shadow(0 4px 6px rgba(20, 50, 110, 0.18)); }
-.flight .trail {
-  display: block; width: 300px; height: 3px; margin-right: -6px; border-radius: 2px;
+/* Airliner fly-bys (spawned by app.js) at three depths, each with a fading contrail.
+   Far: small, hazy, slow, behind the clouds. Near: large, crisp, quick, in front. */
+.flights { position: absolute; inset: 0; }
+.skyplane { position: absolute; left: 0; top: 0; display: flex; align-items: center; will-change: transform; }
+.skyplane.west { flex-direction: row-reverse; }
+.skyplane .jet { display: block; width: var(--w, 90px); }
+.skyplane.west .jet { transform: scaleX(-1); }
+.skyplane .trail {
+  display: block; width: var(--trail, 260px); height: var(--th, 3px); margin-right: -6px; border-radius: 2px;
   background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.85));
-  filter: blur(0.6px);
 }
-/* Flight A: left to right, gently climbing, about once a minute */
-.flight-a { top: 206px; animation: fly-east 62s linear 4s infinite; }
-/* Flight B: right to left, higher and farther away (smaller, fainter), offset schedule */
-.flight-b { top: 78px; opacity: 0.8; animation: fly-west 97s linear 38s infinite; }
-.flight-b .jet { width: 62px; transform: scaleX(-1); }
-.flight-b { flex-direction: row-reverse; }
-.flight-b .trail { width: 220px; margin: 0 0 0 -4px; background: linear-gradient(270deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.8)); }
-@keyframes fly-east {
-  0%   { transform: translate(-420px, 0) rotate(-1.5deg); }
-  30%  { transform: translate(calc(100vw + 40px), -40px) rotate(-1.5deg); }
-  100% { transform: translate(calc(100vw + 40px), -40px) rotate(-1.5deg); }
-}
-@keyframes fly-west {
-  0%   { transform: translate(calc(100vw + 40px), 0) rotate(1deg); }
-  24%  { transform: translate(-360px, 18px) rotate(1deg); }
-  100% { transform: translate(-360px, 18px) rotate(1deg); }
-}
+.skyplane.west .trail { margin: 0 0 0 -6px; background: linear-gradient(270deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.85)); }
+.skyplane.far { opacity: 0.55; filter: blur(0.5px); }
+.skyplane.far .jet { filter: saturate(0.6); }
+.skyplane.mid { opacity: 0.9; }
+.skyplane.mid .jet { filter: drop-shadow(0 4px 6px rgba(20, 50, 110, 0.18)); }
+.skyplane.near .jet { filter: drop-shadow(0 10px 14px rgba(20, 50, 110, 0.28)); }
 
 /* ---------- Intro: landing → cabin → seat → tray → meal ---------- */
 .intro { position: fixed; inset: 0; z-index: 100; background: #eef5ff; transition: opacity 0.6s ease, visibility 0.6s; }

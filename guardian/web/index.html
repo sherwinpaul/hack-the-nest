@@ -152,13 +152,14 @@
     <svg class="cloud far f2" viewBox="0 0 220 100"><use href="#cloud"/></svg>
     <svg class="cloud far f3" viewBox="0 0 220 100"><use href="#cloud"/></svg>
     <svg class="cloud far f4" viewBox="0 0 220 100"><use href="#cloud"/></svg>
-    <!-- Occasional fly-bys, between the far and near cloud layers -->
-    <div class="flight flight-a"><span class="trail"></span><svg class="jet" viewBox="0 0 140 44"><use href="#jet"/></svg></div>
-    <div class="flight flight-b"><span class="trail"></span><svg class="jet" viewBox="0 0 140 44"><use href="#jet"/></svg></div>
+    <!-- Fly-bys are spawned by app.js: far ones go here (behind near clouds)... -->
+    <div class="flights flights-back"></div>
     <svg class="cloud near n1" viewBox="0 0 220 100"><use href="#cloud"/></svg>
     <svg class="cloud near n2" viewBox="0 0 220 100"><use href="#cloud"/></svg>
     <svg class="cloud near n3" viewBox="0 0 220 100"><use href="#cloud"/></svg>
     <svg class="cloud near n4" viewBox="0 0 220 100"><use href="#cloud"/></svg>
+    <!-- ...and near ones here, in front of every cloud -->
+    <div class="flights flights-front"></div>
   </div>
 
   <header class="nav">

@@ -671,6 +671,68 @@
     if (!byId(selectedId)) selectedId = pick()?.option.id ?? null;
     renderAll();
   }
+  // ---------- sky fly-bys ----------
+  // Planes at three depths, launched every so often with random direction and altitude,
+  // so the sky never looks like a loop. Far ones fly behind the clouds, near ones in front.
+  const DEPTHS = {
+    far:  { weight: 0.4, w: [40, 56],   sec: [38, 46], trail: [140, 190], th: 2,   layer: ".flights-back" },
+    mid:  { weight: 0.3, w: [80, 100],  sec: [24, 30], trail: [230, 300], th: 3,   layer: ".flights-back" },
+    near: { weight: 0.3, w: [140, 170], sec: [13, 17], trail: [360, 440], th: 4.5, layer: ".flights-front" },
+  };
+  const MAX_PLANES = 3;
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  function pickDepth() {
+    let r = Math.random();
+    for (const [name, d] of Object.entries(DEPTHS)) { if ((r -= d.weight) <= 0) return name; }
+    return "mid";
+  }
+
+  function launchPlane(depthName = pickDepth(), force = false) {
+    if ((document.hidden && !force) || document.querySelectorAll(".skyplane").length >= MAX_PLANES) return;
+    const d = DEPTHS[depthName];
+    const layer = document.querySelector(d.layer);
+    if (!layer) return;
+    const w = Math.round(rand(...d.w)), trail = Math.round(rand(...d.trail));
+    const h = (w * 44) / 140;
+    // Fly in the open sky above the cards when it is visible; otherwise near the top.
+    const heroTop = document.querySelector(".hero")?.getBoundingClientRect().top ?? 300;
+    const minY = 68, maxY = heroTop > 150 ? heroTop - h - 6 : 230;
+    const y = Math.round(rand(minY, Math.max(minY + 30, maxY)));
+    const east = Math.random() < 0.5;
+    const span = w + trail + 30;
+    const [x0, x1] = east ? [-span, innerWidth + 30] : [innerWidth + 30, -span];
+    const climb = depthName === "far" ? rand(-12, 6) : rand(-36, 10);
+    const tilt = east ? (climb < 0 ? -1.5 : 0.8) : (climb < 0 ? 1.5 : -0.8);
+
+    const el = document.createElement("div");
+    el.className = `skyplane ${depthName} ${east ? "east" : "west"}`;
+    el.style.setProperty("--w", `${w}px`);
+    el.style.setProperty("--trail", `${trail}px`);
+    el.style.setProperty("--th", `${d.th}px`);
+    el.innerHTML = '<span class="trail"></span><svg class="jet" viewBox="0 0 140 44"><use href="#jet"/></svg>';
+    layer.appendChild(el);
+    const duration = rand(...d.sec) * 1000 * ((innerWidth + span) / 1700);
+    el.animate(
+      [
+        { transform: `translate(${x0}px, ${y}px) rotate(${tilt}deg)` },
+        { transform: `translate(${x1}px, ${y + climb}px) rotate(${tilt}deg)` },
+      ],
+      { duration, easing: "linear" },
+    ).onfinish = () => el.remove();
+  }
+
+  function startFlybys() {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (new URLSearchParams(location.search).get("sky") === "demo") {
+      // ?sky=demo: one plane at each depth right away (handy for showing the effect)
+      ["far", "mid", "near"].forEach((depth, i) => setTimeout(() => launchPlane(depth, true), 300 + i * 700));
+    }
+    setTimeout(() => launchPlane("mid"), 2500); // a first plane soon after load
+    const next = () => setTimeout(() => { launchPlane(); next(); }, rand(9000, 20000));
+    next();
+  }
+
   // ---------- intro ----------
   const INTRO_MS = 6900;
   const INTRO_CAPTIONS = [[0, "Landing…"], [2400, "Finding your seat…"], [3700, "Getting comfortable…"], [5100, "Your trip is ready"]];
@@ -697,6 +759,7 @@
 
   async function boot() {
     const intro = playIntro();
+    startFlybys();
     let settled = false;
     const loaded = refresh()
       .then(() => true, (e) => { toast(`Could not load data: ${e.message}`, true); return false; })
