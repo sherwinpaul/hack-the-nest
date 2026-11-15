@@ -5,7 +5,7 @@ from agents.mcp import MCPServer
 
 from guardian import tools
 from guardian.config import settings
-from guardian.models import model_for
+from guardian.models import model_for, model_settings
 
 
 def build_agents(mcp: dict[str, MCPServer] | None = None) -> Agent:
@@ -15,6 +15,7 @@ def build_agents(mcp: dict[str, MCPServer] | None = None) -> Agent:
     weather = Agent(
         name="Weather Risk",
         model=model_for("weather"),
+        model_settings=model_settings(),
         instructions=(
             "You assess weather disruption risk for every airport on the user's current trip, "
             "including connections. Call get_current_trip, then get_airport_weather_risk for each "
@@ -28,6 +29,7 @@ def build_agents(mcp: dict[str, MCPServer] | None = None) -> Agent:
     intel = Agent(
         name="Web Intel",
         model=model_for("intel"),
+        model_settings=model_settings(),
         instructions=(
             "You find live evidence about travel disruption: FAA ground stops, NWS warnings, airline "
             "waivers, strikes, airport closures. Search for the airports you are given. Return 3-5 "
@@ -40,6 +42,7 @@ def build_agents(mcp: dict[str, MCPServer] | None = None) -> Agent:
     fares = Agent(
         name="Fare Search",
         model=model_for("fares"),
+        model_settings=model_settings(),
         instructions=(
             "You find alternative itineraries that reach the meeting city before the deadline, "
             "preferring routes that avoid the airports at risk. Return a concise list with price, "
@@ -52,6 +55,7 @@ def build_agents(mcp: dict[str, MCPServer] | None = None) -> Agent:
     comms = Agent(
         name="Comms",
         model=model_for("comms"),
+        model_settings=model_settings(),
         instructions=(
             "Draft a brief, professional message to the meeting host. State the disruption, the new "
             "plan and ETA, and offer a video fallback if arrival is uncertain. Under 90 words."
@@ -61,6 +65,7 @@ def build_agents(mcp: dict[str, MCPServer] | None = None) -> Agent:
     return Agent(
         name="Trip Guardian",
         model=model_for("orchestrator"),
+        model_settings=model_settings(),
         instructions=(
             "You protect the user's meeting, not just their flight.\n"
             "1. Call get_commitment to learn the deadline and stakes.\n"

@@ -7,23 +7,31 @@ Gemini is reached through its OpenAI-compatible endpoint, so every agent uses th
 
 from typing import Literal
 
-from agents import Model, OpenAIChatCompletionsModel, set_tracing_disabled
+from agents import (
+    Model,
+    ModelRetrySettings,
+    ModelSettings,
+    OpenAIChatCompletionsModel,
+    retry_policies,
+    set_tracing_disabled,
+)
 from openai import AsyncOpenAI
 
 from guardian.config import settings
 
-Provider = Literal["openai", "gemini"]
+Provider = Literal["openai", "gemini", "gemini_lite"]
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
 # Change routing here. This is the one place to rebalance cost vs. quality.
+# Sub-agents use the lite model: each Gemini model has its own rate-limit quota.
 ROLE_PROVIDER: dict[str, Provider] = {
     "orchestrator": "openai",
     "decision": "openai",
     "comms": "openai",
-    "weather": "gemini",
-    "intel": "gemini",
-    "fares": "gemini",
+    "weather": "gemini_lite",
+    "intel": "gemini_lite",
+    "fares": "gemini_lite",
 }
 
 
@@ -31,31 +39,52 @@ def _resolve(provider: Provider) -> Provider:
     s = settings()
     if provider == "openai" and not s.openai_api_key and s.gemini_api_key:
         return "gemini"  # fallback so the team can build before OpenAI credits arrive
-    if provider == "gemini" and not s.gemini_api_key and s.openai_api_key:
+    if provider != "openai" and not s.gemini_api_key and s.openai_api_key:
         return "openai"
     return provider
 
 
+def _model_name(provider: Provider) -> str:
+    s = settings()
+    return {"openai": s.openai_model, "gemini": s.gemini_model, "gemini_lite": s.gemini_lite_model}[
+        provider
+    ]
+
+
 def model_for(role: str) -> Model:
     s = settings()
-    provider = _resolve(ROLE_PROVIDER.get(role, "gemini"))
+    provider = _resolve(ROLE_PROVIDER.get(role, "gemini_lite"))
     if provider == "openai":
         if not s.openai_api_key:
             raise RuntimeError("Set OPENAI_API_KEY or GEMINI_API_KEY in .env")
         client = AsyncOpenAI(api_key=s.openai_api_key)
-        return OpenAIChatCompletionsModel(model=s.openai_model, openai_client=client)
-    if not s.gemini_api_key:
-        raise RuntimeError("Set GEMINI_API_KEY or OPENAI_API_KEY in .env")
-    client = AsyncOpenAI(api_key=s.gemini_api_key, base_url=GEMINI_BASE_URL)
-    return OpenAIChatCompletionsModel(model=s.gemini_model, openai_client=client)
+    else:
+        if not s.gemini_api_key:
+            raise RuntimeError("Set GEMINI_API_KEY or OPENAI_API_KEY in .env")
+        client = AsyncOpenAI(api_key=s.gemini_api_key, base_url=GEMINI_BASE_URL)
+    return OpenAIChatCompletionsModel(model=_model_name(provider), openai_client=client)
+
+
+def model_settings() -> ModelSettings:
+    """Retry rate limits and transient errors with backoff (free tiers 429 quickly)."""
+    return ModelSettings(
+        retry=ModelRetrySettings(
+            max_retries=6,
+            backoff={"initial_delay": 4, "max_delay": 60, "multiplier": 2, "jitter": True},
+            policy=retry_policies.any(
+                retry_policies.retry_after(),
+                retry_policies.http_status([429, 500, 502, 503, 504]),
+                retry_policies.network_error(),
+            ),
+        )
+    )
 
 
 def describe_routing() -> dict[str, str]:
-    s = settings()
     out = {}
     for role, p in ROLE_PROVIDER.items():
         r = _resolve(p)
-        out[role] = f"{r}:{s.openai_model if r == 'openai' else s.gemini_model}"
+        out[role] = f"{r}:{_model_name(r)}"
     return out
 
 

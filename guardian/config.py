@@ -10,7 +10,8 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     gemini_api_key: str = ""
     openai_model: str = "gpt-5-mini"
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.5-flash"
+    gemini_lite_model: str = "gemini-3.5-flash-lite"
 
     exa_api_key: str = ""
     exa_mcp_url: str = "https://mcp.exa.ai/mcp"
