@@ -1,25 +1,36 @@
-"""Remote MCP servers. Used in live mode only; replay mode uses fixtures.
+"""Remote MCP servers.
 
-Endpoints come from public listings. Confirm them at kickoff with:
+Exa (web intel) runs in every mode. Kiwi (fare search) runs in live mode only;
+replay mode uses the recorded fares so the demo stays deterministic.
+
+Check endpoints with:
     uv run python -m guardian.cli --list-mcp-tools
 """
 
 from contextlib import AsyncExitStack
+from urllib.parse import urlencode
 
-from agents.mcp import MCPServerStreamableHttp
+from agents.mcp import MCPServerStreamableHttp, create_static_tool_filter
 
 from guardian.config import settings
 
+EXA_TOOLS = ["web_search_exa", "web_fetch_exa"]
 
-def exa_server() -> MCPServerStreamableHttp | None:
+
+def exa_server() -> MCPServerStreamableHttp:
     s = settings()
-    if not s.exa_api_key:
-        return None
+    url = s.exa_mcp_url
+    if s.exa_api_key:
+        # Exa's hosted MCP takes the key as a query parameter; without one it uses
+        # Exa's anonymous free tier, which is rate-limited.
+        url += ("&" if "?" in url else "?") + urlencode({"exaApiKey": s.exa_api_key})
     return MCPServerStreamableHttp(
         name="exa",
-        params={"url": s.exa_mcp_url, "headers": {"x-api-key": s.exa_api_key}},
+        params={"url": url},
         cache_tools_list=True,
-        client_session_timeout_seconds=30,
+        client_session_timeout_seconds=60,
+        tool_filter=create_static_tool_filter(allowed_tool_names=EXA_TOOLS),
+        max_retry_attempts=2,
     )
 
 
@@ -28,15 +39,17 @@ def kiwi_server() -> MCPServerStreamableHttp:
         name="kiwi",
         params={"url": settings().kiwi_mcp_url},
         cache_tools_list=True,
-        client_session_timeout_seconds=30,
+        client_session_timeout_seconds=60,
     )
 
 
 async def connect_all(stack: AsyncExitStack) -> dict[str, MCPServerStreamableHttp]:
+    """Connect the servers this mode needs; a failed server is skipped, not fatal."""
+    wanted = [("exa", exa_server())]
+    if settings().data_mode == "live":
+        wanted.append(("kiwi", kiwi_server()))
     servers = {}
-    for name, srv in (("exa", exa_server()), ("kiwi", kiwi_server())):
-        if srv is None:
-            continue
+    for name, srv in wanted:
         try:
             servers[name] = await stack.enter_async_context(srv)
         except Exception as e:  # noqa: BLE001 — keep running without a server rather than crash the demo

@@ -11,7 +11,9 @@ Built for Hack The Nest 2026: Future of Intelligence track (OpenAI + Exa).
 
 - **Trip Guardian** (orchestrator, OpenAI) calls specialist agents as tools:
   - **Weather Risk** (Gemini): Open-Meteo forecasts for each airport on the route
-  - **Web Intel** (Gemini + Exa MCP): FAA, NWS, waiver and news evidence with sources
+  - **Web Intel** (Gemini + Exa MCP, `web_search_exa` / `web_fetch_exa`): live FAA, NWS, airline
+    waiver and news evidence with cited sources. Exa runs in every mode; in replay it looks up the
+    booked airline's real waiver and rebooking policy next to the recorded storm evidence
   - **Fare Search** (Gemini + Kiwi MCP / Duffel): alternative itineraries
   - **Comms** (OpenAI): drafts the message to the meeting host
 - **Scoring** is deterministic code (`guardian/scoring.py`); the LLM only explains it.

@@ -29,18 +29,41 @@ def build_agents(
         tools=[tools.get_current_trip, tools.get_airport_weather_risk],
     )
 
-    intel_tools = [] if live and "exa" in mcp else [tools.get_disruption_news]
+    has_exa = "exa" in mcp
+    exa_rules = (
+        "Use web_search_exa with specific queries (airport code, airline, 'travel waiver', "
+        "'ground stop', 'NWS warning'); call web_fetch_exa only if a result needs more detail. "
+        "At most 3 searches. "
+    )
+    if live:
+        intel_instructions = (
+            "You find live evidence about travel disruption for the airports you are given: FAA "
+            "ground stops and delay programs, NWS warnings, airline travel waivers, strikes, "
+            "closures. " + exa_rules
+        )
+    else:
+        intel_instructions = (
+            "This is a recorded scenario. First call get_disruption_news for the scenario's "
+            "evidence. "
+            + (
+                "Then use Exa to find the booked airline's real, current weather travel-waiver "
+                "and rebooking policy for the highest-risk airport in the evidence (usually the "
+                "connecting hub, not the destination), which tells the traveller what changes "
+                "are free. "
+                + exa_rules
+                if has_exa
+                else ""
+            )
+        )
     intel = Agent(
         name="Web Intel",
         model=model_for("intel"),
         model_settings=model_settings(),
-        instructions=(
-            "You find live evidence about travel disruption: FAA ground stops, NWS warnings, airline "
-            "waivers, strikes, airport closures. Search for the airports you are given. Return 3-5 "
-            "bullet findings, each with its source URL. Never invent sources."
-        ),
-        tools=intel_tools,
-        mcp_servers=[mcp["exa"]] if live and "exa" in mcp else [],
+        instructions=intel_instructions
+        + "Return 3-6 bullet findings, each ending with its source URL. Never invent a source "
+        "or a URL; only cite URLs that appear in tool results.",
+        tools=[] if live and has_exa else [tools.get_disruption_news],
+        mcp_servers=[mcp["exa"]] if has_exa else [],
     )
 
     fares = Agent(

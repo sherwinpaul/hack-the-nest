@@ -54,7 +54,8 @@ async def agent_run() -> None:
     configure_tracing()
     print("Model routing:", describe_routing(), f"| data: {settings().data_mode}\n")
     async with AsyncExitStack() as stack:
-        mcp = await connect_all(stack) if settings().data_mode == "live" else {}
+        mcp = await connect_all(stack)
+        print("MCP connected:", ", ".join(mcp) or "none")
         guardian = build_agents(mcp)
         result = await Runner.run(guardian, "Check my upcoming trip and protect my meeting.", max_turns=20)
     print(result.final_output, "\n")

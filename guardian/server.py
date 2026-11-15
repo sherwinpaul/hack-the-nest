@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from guardian import booking, data
 from guardian.agents_def import build_agents
 from guardian.config import settings
+from guardian.mcp_servers import connect_all
 from guardian.models import configure_tracing, describe_routing
 from guardian.schemas import ScoredOption
 from guardian.tools import compute_ranking
@@ -38,7 +39,8 @@ _run_lock = asyncio.Lock()
 
 @app.get("/")
 def index() -> FileResponse:
-    return FileResponse(WEB / "index.html")
+    # no-cache: always revalidate, so a new app.js never runs against a stale page
+    return FileResponse(WEB / "index.html", headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/api/state")
@@ -99,11 +101,14 @@ async def _run_events():
     async def worker():
         try:
             async with AsyncExitStack() as stack:
-                mcp = {}
-                if settings().data_mode == "live":
-                    from guardian.mcp_servers import connect_all
-
-                    mcp = await connect_all(stack)
+                mcp = await connect_all(stack)
+                q.put_nowait(
+                    {
+                        "type": "system",
+                        "agent": "MCP",
+                        "text": "connected: " + (", ".join(mcp) or "none (using recorded data)"),
+                    }
+                )
                 agent = build_agents(mcp, hooks=hooks)
                 result = await Runner.run(
                     agent,

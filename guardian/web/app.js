@@ -386,6 +386,9 @@
       case "system":
         recAdd("system", ev.agent, esc(ev.text));
         break;
+      case "sources":
+        addSources(ev.query, ev.items);
+        break;
       case "error":
         recAdd("error", "Error", esc(ev.text));
         break;
@@ -397,11 +400,25 @@
     }
   }
 
+  function addSources(query, items) {
+    const box = $("#evidence");
+    box.querySelector(".ev-empty")?.remove();
+    const safeUrl = (u) => (/^https?:\/\//i.test(u) ? u : "#");
+    const html =
+      (query ? `<div class="ev-query">exa search › <b>${esc(query)}</b></div>` : "") +
+      items.map((s, i) => `<a class="ev-card" href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener noreferrer" style="animation-delay:${i * 70}ms">
+          <span class="ev-domain"><span>${esc(s.domain)}</span><span>${esc(s.published || "")}</span></span>
+          <span class="ev-title">${esc(s.title)}</span>
+        </a>`).join("");
+    box.insertAdjacentHTML("beforeend", html);
+  }
+
   function engage() {
     if (running) return;
     running = true;
     runStart = performance.now();
     $("#recorder").innerHTML = "";
+    $("#evidence").innerHTML = `<p class="ev-empty">Waiting for the Web Intel agent…</p>`;
     $("#brief").innerHTML = `<p class="muted">Agents are working…</p>`;
     AGENTS.forEach((a) => setAnn(a.key, null));
     $("#engage").disabled = true;
