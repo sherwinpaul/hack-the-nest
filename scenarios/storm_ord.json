@@ -1,0 +1,65 @@
+{
+  "_note": "SAMPLE replay scenario for demos. Weather, prices and news below are illustrative, not real records. Replace with data recorded from a real past storm before presenting.",
+  "commitment": {
+    "title": "Board meeting with Series A investors",
+    "city": "Denver",
+    "airport": "DEN",
+    "must_arrive_by": "2026-11-17T22:30:00Z",
+    "meeting_value_usd": 20000,
+    "max_extra_spend_usd": 600,
+    "video_fallback_ok": true
+  },
+  "current_trip": {
+    "id": "current-UA-via-ORD",
+    "mode": "flight",
+    "source": "fixture",
+    "price_usd": 310,
+    "legs": [
+      {"origin": "DTW", "destination": "ORD", "depart": "2026-11-17T13:00:00Z", "arrive": "2026-11-17T14:15:00Z", "carrier": "UA", "flight_no": "UA 1123"},
+      {"origin": "ORD", "destination": "DEN", "depart": "2026-11-17T16:30:00Z", "arrive": "2026-11-17T19:15:00Z", "carrier": "UA", "flight_no": "UA 455"}
+    ]
+  },
+  "alternatives": [
+    {
+      "id": "alt-F9-nonstop", "mode": "flight", "source": "duffel", "price_usd": 520, "booking_ref": "off_test_f9_nonstop",
+      "legs": [{"origin": "DTW", "destination": "DEN", "depart": "2026-11-17T14:00:00Z", "arrive": "2026-11-17T17:35:00Z", "carrier": "F9", "flight_no": "F9 1702"}]
+    },
+    {
+      "id": "alt-DL-via-MSP", "mode": "flight", "source": "kiwi", "price_usd": 480, "booking_ref": "https://www.kiwi.com/",
+      "legs": [
+        {"origin": "DTW", "destination": "MSP", "depart": "2026-11-17T12:30:00Z", "arrive": "2026-11-17T14:40:00Z", "carrier": "DL", "flight_no": "DL 1450"},
+        {"origin": "MSP", "destination": "DEN", "depart": "2026-11-17T16:15:00Z", "arrive": "2026-11-17T18:45:00Z", "carrier": "DL", "flight_no": "DL 2210"}
+      ]
+    },
+    {
+      "id": "alt-DL-nonstop-late", "mode": "flight", "source": "kiwi", "price_usd": 390, "booking_ref": "https://www.kiwi.com/",
+      "legs": [{"origin": "DTW", "destination": "DEN", "depart": "2026-11-17T18:00:00Z", "arrive": "2026-11-17T21:45:00Z", "carrier": "DL", "flight_no": "DL 887"}]
+    },
+    {
+      "id": "alt-AA-via-DFW", "mode": "flight", "source": "google_flights", "price_usd": 430, "booking_ref": "https://www.google.com/travel/flights",
+      "legs": [
+        {"origin": "DTW", "destination": "DFW", "depart": "2026-11-17T15:00:00Z", "arrive": "2026-11-17T18:10:00Z", "carrier": "AA", "flight_no": "AA 2301"},
+        {"origin": "DFW", "destination": "DEN", "depart": "2026-11-17T19:30:00Z", "arrive": "2026-11-17T21:40:00Z", "carrier": "AA", "flight_no": "AA 1187"}
+      ]
+    },
+    {
+      "id": "alt-UA-via-ORD-late", "mode": "flight", "source": "kiwi", "price_usd": 290, "booking_ref": "https://www.kiwi.com/",
+      "legs": [
+        {"origin": "DTW", "destination": "ORD", "depart": "2026-11-17T17:00:00Z", "arrive": "2026-11-17T18:15:00Z", "carrier": "UA", "flight_no": "UA 2290"},
+        {"origin": "ORD", "destination": "DEN", "depart": "2026-11-17T19:00:00Z", "arrive": "2026-11-17T23:10:00Z", "carrier": "UA", "flight_no": "UA 610"}
+      ]
+    }
+  ],
+  "weather": [
+    {"airport": "ORD", "disruption_prob": 0.70, "reason": "[sample] blizzard warning: 15-25cm snow, gusts ~70 km/h"},
+    {"airport": "MSP", "disruption_prob": 0.35, "reason": "[sample] northern edge of the same system, light snow"},
+    {"airport": "DTW", "disruption_prob": 0.15, "reason": "[sample] rain changing to snow late"},
+    {"airport": "DEN", "disruption_prob": 0.08, "reason": "[sample] clear, light wind"},
+    {"airport": "DFW", "disruption_prob": 0.05, "reason": "[sample] clear"}
+  ],
+  "intel": [
+    {"title": "[sample] FAA NAS status: ground delay program expected at ORD", "url": "https://nasstatus.faa.gov/", "snippet": "Illustrative: GDP anticipated from 15Z due to snow and wind."},
+    {"title": "[sample] NWS Chicago: Blizzard Warning", "url": "https://www.weather.gov/lot/", "snippet": "Illustrative: heavy snow and blowing snow Tuesday."},
+    {"title": "[sample] United travel waiver for Chicago O'Hare", "url": "https://www.united.com/en/us/travel/trip-planning/travel-notices", "snippet": "Illustrative: change fees waived for ORD travel Nov 17."}
+  ]
+}
