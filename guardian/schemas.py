@@ -3,17 +3,18 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, computed_field
 
+Priority = Literal["price", "balanced", "reliability"]
+
 
 class Commitment(BaseModel):
-    """The thing the user must not miss. The agent protects this, not the flight."""
+    """The event the traveller needs to reach: a wedding, interview, meeting, concert..."""
 
     title: str
     city: str
     airport: str  # nearest destination airport (IATA)
-    must_arrive_by: datetime  # latest airport arrival that still makes the meeting
-    meeting_value_usd: float = Field(description="What missing it would cost the user")
-    max_extra_spend_usd: float = 1000
-    video_fallback_ok: bool = True
+    must_arrive_by: datetime  # latest airport arrival that still gets them there in time
+    priority: Priority = "balanced"  # the traveller's default trade-off; the UI can change it
+    remote_fallback_ok: bool = False  # can they join remotely if late (e.g. a video call)?
 
 
 class Leg(BaseModel):
@@ -59,6 +60,6 @@ class Evidence(BaseModel):
 class ScoredOption(BaseModel):
     option: TravelOption
     p_on_time: float
-    expected_loss_usd: float  # (1 - p) * meeting_value + price
-    extra_cost_usd: float
-    explanation: str = ""
+    score_usd: float  # risk-adjusted cost: price + (1 - p) * priority weight; lower is better
+    extra_cost_usd: float  # versus the current booking
+    tags: list[str] = []  # recommended | cheapest | most_reliable | booked | too_late

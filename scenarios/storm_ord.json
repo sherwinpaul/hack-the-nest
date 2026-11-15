@@ -1,13 +1,12 @@
 {
   "_note": "SAMPLE replay scenario for demos. Weather, prices and news below are illustrative, not real records. Replace with data recorded from a real past storm before presenting.",
   "commitment": {
-    "title": "Board meeting with Series A investors",
+    "title": "Sister's wedding rehearsal",
     "city": "Denver",
     "airport": "DEN",
     "must_arrive_by": "2026-11-17T22:30:00Z",
-    "meeting_value_usd": 20000,
-    "max_extra_spend_usd": 600,
-    "video_fallback_ok": true
+    "priority": "balanced",
+    "remote_fallback_ok": false
   },
   "current_trip": {
     "id": "current-UA-via-ORD",

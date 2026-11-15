@@ -1,9 +1,11 @@
 # Trip Guardian
 
-A multi-agent system that protects your **meeting**, not just your flight. It watches weather and
-the airline network along your whole route, finds evidence on the live web, ranks alternatives by
-risk × meeting value × cost, and prepares the rebooking and a message to your host. You approve the
-final step before anything is booked.
+A multi-agent system that gets you to your **event** on time (a wedding, interview, meeting or
+appointment) with the flight that fits what matters to you: the **lowest price**, the **most
+reliable** option, or a **balance**. It watches the weather and the airline network along your whole
+route, finds evidence on the live web, ranks every option with transparent math, and prepares the
+booking and a note to the person you are meeting. You approve the final step before anything is
+booked.
 
 Built for Hack The Nest 2026: Future of Intelligence track (OpenAI + Exa).
 
@@ -15,7 +17,7 @@ Built for Hack The Nest 2026: Future of Intelligence track (OpenAI + Exa).
     waiver and news evidence with cited sources. Exa runs in every mode; in replay it looks up the
     booked airline's real waiver and rebooking policy next to the recorded storm evidence
   - **Fare Search** (Gemini + Kiwi MCP / Duffel): alternative itineraries
-  - **Comms** (OpenAI): drafts the message to the meeting host
+  - **Comms** (OpenAI): drafts a note to the person you are meeting
 - **Scoring** is deterministic code (`guardian/scoring.py`); the LLM only explains it.
 - **Booking** runs only after user approval and uses Duffel test mode only.
 - **Hybrid models**: per-role routing in `guardian/models.py`. Gemini goes through its

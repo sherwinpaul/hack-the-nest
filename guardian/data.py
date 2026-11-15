@@ -28,6 +28,23 @@ def load_commitment() -> Commitment:
     return Commitment.model_validate(_scenario()["commitment"])
 
 
+# The traveller's chosen trade-off, changed from the dashboard. One process serves one
+# traveller in this prototype; per-user state would move into a session store.
+_priority: str | None = None
+PRIORITIES = ("price", "balanced", "reliability")
+
+
+def get_priority() -> str:
+    return _priority or load_commitment().priority
+
+
+def set_priority(value: str) -> None:
+    global _priority
+    if value not in PRIORITIES:
+        raise ValueError(f"priority must be one of {PRIORITIES}")
+    _priority = value
+
+
 def load_current_trip() -> TravelOption:
     return TravelOption.model_validate(_scenario()["current_trip"])
 

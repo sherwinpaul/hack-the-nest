@@ -83,12 +83,15 @@ def build_agents(
         model=model_for("comms"),
         model_settings=model_settings(),
         instructions=(
-            "Draft a brief, professional message to the meeting host. Structure: (1) the "
+            "Draft a short, friendly message from the traveller to the person they are meeting "
+            "or the event's organiser (a host, family member, interviewer...). Match the tone "
+            "to the event: warm for personal events, professional for work. Cover: (1) any "
             "disruption that threatens the ORIGINAL booking, described accurately with its real "
-            "severity (never downplay a blizzard as 'minor'); (2) the NEW flight the traveller is "
-            "switching to, which is the solution, not a delayed flight; (3) its arrival time, "
-            "stated in the destination's local time if given; (4) a video fallback if arrival is "
-            "uncertain. Use only facts you are given. Under 90 words."
+            "severity (never downplay a blizzard as 'minor'); (2) the flight they are now taking, "
+            "which is the solution, not a delayed flight; (3) its arrival time in the "
+            "destination's local time if given. Offer to join remotely only if you are told "
+            "that is possible. If nothing threatens the trip, just confirm the arrival time. "
+            "Use only facts you are given. Under 80 words."
         ),
     )
 
@@ -97,16 +100,23 @@ def build_agents(
         model=model_for("orchestrator"),
         model_settings=model_settings(),
         instructions=(
-            "You protect the user's meeting, not just their flight.\n"
-            "1. Call get_commitment to learn the deadline and stakes.\n"
+            "You help a traveller reach an event on time (a wedding, interview, meeting, "
+            "appointment...) by finding the best flight for what they care about: the lowest "
+            "price, the most reliable option, or a balance of the two.\n"
+            "1. Call get_commitment for the event, deadline and the traveller's priority.\n"
             "2. Call weather_risk and web_intel (in parallel) on the current trip.\n"
-            "3. If risk is material, call fare_search for alternatives.\n"
-            "4. Call rank_options. Use ONLY its numbers; never compute scores yourself.\n"
-            "5. Recommend the top option: why (cite evidence), P(on time), extra cost.\n"
-            "6. Call draft_host_message. In its input, state the original booking and what "
-            "threatens it, the recommended replacement flight (number, route, arrival time) and "
-            "the meeting it protects.\n"
-            "Never book anything. Booking happens only after the user approves in the app."
+            "3. Call fare_search for alternatives.\n"
+            "4. Call rank_options. Use ONLY its numbers and tags; never compute scores yourself.\n"
+            "5. Recommend the option tagged 'recommended' and explain it in plain, friendly "
+            "language: why it fits their priority, its on-time chance, its price versus their "
+            "current booking, and the evidence behind any risk (cite sources). Also name the "
+            "cheapest and the most reliable options if they differ, so the traveller sees the "
+            "trade-off. If the recommendation is their current booking, say they can keep it.\n"
+            "6. Call draft_host_message. In its input, state the event, the original booking "
+            "and anything threatening it, the flight the traveller should take (number, route, "
+            "arrival time), and whether joining remotely is possible.\n"
+            "Avoid jargon such as 'expected loss' or 'P(on time)'; say 'chance of arriving on "
+            "time'. Never book anything; booking happens only after the traveller approves."
         ),
         tools=[
             tools.get_commitment,

@@ -29,12 +29,12 @@
 
   // Plain-language progress for the traveller; raw events go to the technical log.
   const FRIENDLY = {
-    get_commitment: { doing: "Reading your meeting details", done: () => "Deadline and what's at stake confirmed" },
+    get_commitment: { doing: "Reading your trip details", done: () => "Event and arrival deadline confirmed" },
     weather_risk: { doing: "Checking the weather along your route", done: () => weatherSummary() },
     web_intel: { doing: "Searching the web for delays and travel alerts", done: () => (sourceCount ? `${sourceCount} relevant sources found` : "No major alerts found") },
     fare_search: { doing: "Looking for flights that still get you there in time", done: () => `${Math.max(0, state.ranking.length - 1)} alternatives found` },
     rank_options: { doing: "Comparing every option on reliability and cost", done: () => bestSummary() },
-    draft_host_message: { doing: "Drafting a note to your meeting host", done: () => "Ready to review below" },
+    draft_host_message: { doing: "Drafting a note for the people expecting you", done: () => "Ready to review below" },
   };
   let sourceCount = 0;
   function weatherSummary() {
@@ -99,8 +99,6 @@
     $("#c-title").textContent = c.title;
     $("#c-where").textContent = `${c.city} · ${c.airport}`;
     $("#c-deadline").textContent = local(c.must_arrive_by, c.airport);
-    $("#c-stake").textContent = usd(c.meeting_value_usd);
-    $("#c-budget").textContent = `up to ${usd(c.max_extra_spend_usd)}`;
     tick();
   }
   function tick() {
@@ -122,6 +120,7 @@
     $("#reco-sub").textContent = `Lands ${local(o.arrive, o.airports.at(-1))} · ${span(slack)} before your deadline · ${usd(o.price_usd)}`;
     $("#reco-source").textContent = o.source === "kiwi" ? "Live fare from Kiwi.com" : state.mode === "replay" ? "Sample fare" : `Fare via ${o.source}`;
     const curP = cur ? cur.p_on_time : 0;
+    $("#cmp-pick").closest(".cmp-row").hidden = isCurrent; // one bar is enough when nothing changes
     $("#cmp-cur-val").textContent = pct(curP);
     $("#cmp-pick-val").textContent = pct(p.p_on_time);
     requestAnimationFrame(() => {
@@ -129,8 +128,9 @@
       $("#cmp-cur").style.background = pColor(curP);
       $("#cmp-pick").style.width = pct(p.p_on_time);
     });
-    $("#m-extra").textContent = p.extra_cost_usd ? `+${usd(p.extra_cost_usd)}` : "No extra";
-    $("#m-saved").textContent = cur ? usd(Math.max(0, cur.expected_loss_usd - p.expected_loss_usd)) : "—";
+    $("#m-price").textContent = usd(o.price_usd);
+    const diff = cur ? o.price_usd - cur.option.price_usd : 0;
+    $("#m-extra").textContent = isCurrent ? "No change" : diff > 0 ? `+${usd(diff)}` : diff < 0 ? `${usd(-diff)} less` : "Same price";
     const avoided = (cur?.option.airports || [])
       .filter((a) => !o.airports.includes(a))
       .map((a) => [a, state.risks[a]?.disruption_prob ?? 0])
@@ -142,6 +142,37 @@
     const btn = $("#reco-book");
     btn.disabled = isCurrent;
     btn.textContent = isCurrent ? "Already booked" : "Review & book";
+
+    // Show the trade-off: cheapest and most reliable, when they differ from the pick.
+    const chips = [["cheapest", "Cheapest"], ["most_reliable", "Most reliable"]]
+      .map(([tag, label]) => [label, state.ranking.find((r) => r.tags.includes(tag))])
+      .filter(([, r]) => r && r.option.id !== o.id);
+    $("#alts").innerHTML = chips.map(([label, r]) =>
+      `<button class="alt-chip" data-id="${esc(r.option.id)}">${label}: <b>${esc(flightNo(r.option))}</b> ${usd(r.option.price_usd)} · ${pct(r.p_on_time)} on time</button>`).join("");
+    document.querySelectorAll(".alt-chip").forEach((b) => b.addEventListener("click", () => {
+      select(b.dataset.id);
+      $("#options").scrollIntoView({ behavior: "smooth", block: "start" });
+    }));
+  }
+
+  // ---------- priority ----------
+  const PRIORITY = {
+    price: { label: "Lowest price", hint: "The cheapest flight that still gets you there in time, even with some risk." },
+    balanced: { label: "Balanced", hint: "Pays a little more only when it clearly lowers the chance of being late." },
+    reliability: { label: "Most reliable", hint: "The best chance of arriving on time, even if it costs more." },
+  };
+  function renderPriority() {
+    document.querySelectorAll("#priority button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.p === state.priority)));
+    $("#priority-hint").textContent = PRIORITY[state.priority]?.hint || "";
+    $("#options-sub").textContent = `Best first for: ${PRIORITY[state.priority]?.label || "your priority"}`;
+  }
+  async function setPriority(p) {
+    if (!state || p === state.priority) return;
+    const res = await fetch(`/api/state?priority=${encodeURIComponent(p)}`);
+    if (!res.ok) { toast("Could not update your priority", true); return; }
+    state = await res.json();
+    selectedId = pick()?.option.id ?? null;
+    renderAll();
   }
 
   // ---------- pipeline ----------
@@ -279,13 +310,16 @@
   }
 
   // ---------- options table ----------
-  function statusPill(r, i) {
-    if (r.p_on_time === 0) return '<span class="pill pill-gray">Too late</span>';
-    if (i === 0) return '<span class="pill pill-blue">Recommended</span>';
-    if (r.option.id === state.current_trip.id) {
-      return r.p_on_time >= 0.8 ? '<span class="pill pill-gray">Booked</span>' : '<span class="pill pill-red">Booked · at risk</span>';
-    }
-    return r.p_on_time >= 0.8 ? '<span class="pill pill-green">Reliable</span>' : '<span class="pill pill-amber">At risk</span>';
+  function tagPills(r) {
+    const t = r.tags || [];
+    const out = [];
+    if (t.includes("too_late")) return '<span class="pill pill-gray">Too late</span>';
+    if (t.includes("recommended")) out.push('<span class="pill pill-blue">Best for you</span>');
+    if (t.includes("cheapest")) out.push('<span class="pill pill-green">Cheapest</span>');
+    if (t.includes("most_reliable")) out.push('<span class="pill pill-violet">Most reliable</span>');
+    if (t.includes("booked")) out.push(r.p_on_time >= 0.8 ? '<span class="pill pill-gray">Your booking</span>' : '<span class="pill pill-red">Your booking · at risk</span>');
+    if (!out.length && r.p_on_time < 0.7) out.push('<span class="pill pill-amber">Higher risk</span>');
+    return `<span class="tags">${out.join("")}</span>`;
   }
   function renderOptions() {
     const rows = state.ranking.slice(0, 8);
@@ -301,8 +335,7 @@
         <td>${esc(local(o.arrive, o.airports.at(-1), false))}</td>
         <td><span class="ontime"><span class="bar"><i data-w="${pct(r.p_on_time)}" style="background:${pColor(r.p_on_time)}"></i></span><span>${pct(r.p_on_time)}</span></span></td>
         <td class="num">${usd(o.price_usd)}<span class="sub">${r.extra_cost_usd ? "+" + usd(r.extra_cost_usd) : "no extra"}</span></td>
-        <td class="num"><b>${usd(r.expected_loss_usd)}</b></td>
-        <td>${statusPill(r, i)}</td>
+        <td>${tagPills(r)}</td>
       </tr>`;
     }).join("");
     requestAnimationFrame(() => document.querySelectorAll(".ontime i").forEach((b) => (b.style.width = b.dataset.w)));
@@ -496,7 +529,7 @@
 
   // ---------- boot ----------
   function renderAll() {
-    renderHeader(); renderReco(); renderMap(); renderRisks(); renderOptions();
+    renderHeader(); renderPriority(); renderReco(); renderMap(); renderRisks(); renderOptions();
   }
   async function refresh() {
     const res = await fetch("/api/state");
@@ -514,6 +547,7 @@
   $("#engage").addEventListener("click", run);
   $("#approve").addEventListener("click", () => openConfirm(selectedId));
   $("#reco-book").addEventListener("click", () => openConfirm(pick()?.option.id));
+  document.querySelectorAll("#priority button").forEach((b) => b.addEventListener("click", () => setPriority(b.dataset.p)));
   $("#copy-host").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText($("#host-msg").value); toast("Message copied"); }
     catch { toast("Copy failed. Select the text and copy it manually.", true); }

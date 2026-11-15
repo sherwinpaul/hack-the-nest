@@ -18,19 +18,20 @@ from guardian.tools import compute_ranking, ensure_live_fares
 
 
 def print_ranking(ranked: list[ScoredOption]) -> None:
-    print(f"{'#':<3}{'option':<22}{'route':<16}{'P(on time)':>11}{'+cost':>8}{'exp. loss':>11}")
+    print(f"{'#':<3}{'option':<22}{'route':<14}{'on time':>8}{'price':>8}{'score':>9}  tags")
     for i, s in enumerate(ranked, 1):
         o = s.option
         print(
-            f"{i:<3}{o.id:<22}{'-'.join(o.airports):<16}{s.p_on_time:>11.0%}"
-            f"{s.extra_cost_usd:>8.0f}{s.expected_loss_usd:>11,.0f}"
+            f"{i:<3}{o.id:<22}{'-'.join(o.airports):<14}{s.p_on_time:>8.0%}"
+            f"{o.price_usd:>8.0f}{s.score_usd:>9,.0f}  {', '.join(s.tags)}"
         )
 
 
-def dry_run() -> list[ScoredOption]:
+def dry_run(priority: str | None = None) -> list[ScoredOption]:
     c = data.load_commitment()
-    print(f"Protecting: {c.title} — arrive {c.airport} by {c.must_arrive_by:%a %H:%MZ}\n")
-    ranked = [ScoredOption.model_validate(r) for r in compute_ranking()]
+    p = priority or data.get_priority()
+    print(f"Trip: {c.title} — arrive {c.airport} by {c.must_arrive_by:%a %H:%MZ} | priority: {p}\n")
+    ranked = [ScoredOption.model_validate(r) for r in compute_ranking(p)]
     print_ranking(ranked)
     return ranked
 
@@ -57,7 +58,7 @@ async def agent_run() -> None:
         mcp = await connect_all(stack)
         print("MCP connected:", ", ".join(mcp) or "none")
         guardian = build_agents(mcp)
-        result = await Runner.run(guardian, "Check my upcoming trip and protect my meeting.", max_turns=20)
+        result = await Runner.run(guardian, "Check my upcoming trip and find the best way to get me to my event on time.", max_turns=20)
     print(result.final_output, "\n")
 
     ranked = dry_run()
@@ -75,7 +76,10 @@ def main() -> None:
     p = argparse.ArgumentParser(prog="guardian")
     p.add_argument("--dry", action="store_true", help="deterministic ranking only, no LLM")
     p.add_argument("--list-mcp-tools", action="store_true")
+    p.add_argument("--priority", choices=data.PRIORITIES, help="price, balanced or reliability")
     a = p.parse_args()
+    if a.priority:
+        data.set_priority(a.priority)
     if a.dry:
         asyncio.run(ensure_live_fares())  # no-op in replay mode
         dry_run()

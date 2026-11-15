@@ -34,15 +34,22 @@
     <!-- Hero -->
     <section class="hero">
       <div class="card commitment">
-        <div class="eyebrow">Protecting</div>
+        <div class="eyebrow">Your trip</div>
         <h1 id="c-title">—</h1>
         <div class="c-where" id="c-where">—</div>
         <dl class="facts">
-          <div><dt>Arrive by</dt><dd id="c-deadline">—</dd></div>
+          <div><dt>Need to arrive by</dt><dd id="c-deadline">—</dd></div>
           <div><dt>Time left</dt><dd id="c-countdown">—</dd></div>
-          <div><dt>At stake</dt><dd id="c-stake">—</dd></div>
-          <div><dt>Extra budget</dt><dd id="c-budget">—</dd></div>
         </dl>
+        <div class="priority">
+          <div class="priority-label">What matters most to you?</div>
+          <div class="segmented" id="priority" role="radiogroup" aria-label="What matters most">
+            <button role="radio" data-p="price">Lowest price</button>
+            <button role="radio" data-p="balanced">Balanced</button>
+            <button role="radio" data-p="reliability">Most reliable</button>
+          </div>
+          <div class="priority-hint" id="priority-hint"></div>
+        </div>
       </div>
 
       <div class="card reco" id="reco">
@@ -65,10 +72,11 @@
           </div>
         </div>
         <div class="reco-metrics">
-          <div><span class="m-val" id="m-extra">—</span><span class="m-label">Extra cost</span></div>
-          <div><span class="m-val good" id="m-saved">—</span><span class="m-label">Expected loss avoided</span></div>
+          <div><span class="m-val" id="m-price">—</span><span class="m-label">Price</span></div>
+          <div><span class="m-val" id="m-extra">—</span><span class="m-label">Versus your booking</span></div>
           <div><span class="m-val" id="m-avoid">—</span><span class="m-label">Risk avoided</span></div>
         </div>
+        <div class="alts" id="alts"></div>
         <div class="reco-actions">
           <button class="btn btn-primary" id="reco-book">Review &amp; book</button>
           <a class="btn btn-ghost" href="#options">Compare all options</a>
@@ -109,14 +117,14 @@
       <div class="card" id="options">
         <div class="card-head">
           <h3>Options</h3>
-          <span class="muted small">Best first: weighs your chance of arriving on time against the price</span>
+          <span class="muted small" id="options-sub">Best first for your priority</span>
         </div>
         <div class="table-wrap">
           <table class="options">
             <thead>
               <tr>
                 <th>Flight</th><th>Route</th><th>Departs</th><th>Arrives</th>
-                <th>On-time chance</th><th class="num">Price</th><th class="num" title="What this option is likely to cost you overall: the fare plus the value of the meeting times the chance you miss it. Lower is better.">Risk-adjusted cost</th><th></th>
+                <th>On-time chance</th><th class="num">Price</th><th></th>
               </tr>
             </thead>
             <tbody id="options-body"></tbody>
@@ -167,7 +175,7 @@
       </div>
     </section>
 
-    <footer class="foot">Rankings come from transparent math; AI only gathers evidence and explains it. Nothing is booked without your approval.</footer>
+    <footer class="foot">Rankings come from transparent math based on your priority; AI only gathers evidence and explains it. Nothing is booked without your approval.</footer>
   </main>
 
   <dialog id="confirm" class="dialog">

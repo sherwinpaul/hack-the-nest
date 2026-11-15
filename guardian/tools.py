@@ -14,7 +14,7 @@ from guardian.schemas import ScoredOption
 
 @function_tool
 def get_commitment() -> str:
-    """Return the meeting the user must not miss, with deadline and value."""
+    """Return the event the traveller needs to reach, the arrival deadline and their priority."""
     c = data.load_commitment()
     return json.dumps(
         {**c.model_dump(mode="json"), "must_arrive_by_local": _local(c.must_arrive_by, c.airport)}
@@ -47,7 +47,7 @@ def get_airport_weather_risk(airport: str, when_iso: str) -> str:
 
 @function_tool
 async def search_alternative_trips() -> str:
-    """Search alternative itineraries that land before the meeting deadline.
+    """Search alternative itineraries that land before the arrival deadline.
 
     Live mode queries Kiwi.com (via its MCP server) twice: all flights that arrive in
     time, and the same while never connecting through high-risk hubs.
@@ -86,23 +86,27 @@ def get_disruption_news() -> str:
     return json.dumps([e.model_dump() for e in data.load_intel_fixture()])
 
 
-def compute_ranking() -> list[dict]:
-    """Shared by the rank tool and the --dry CLI path."""
+def compute_ranking(priority: str | None = None) -> list[dict]:
+    """Shared by the rank tool, the API and the --dry CLI path.
+
+    `priority` defaults to the traveller's current choice (set from the dashboard).
+    """
     c = data.load_commitment()
     current = data.load_current_trip()
     options = [current] + data.load_alternatives()
     airports = {a for o in options for a in o.airports}
     risks = [data.airport_risk(a, c.must_arrive_by) for a in sorted(airports)]
-    ranked = scoring.rank(options, risks, c, baseline_price=current.price_usd)
+    ranked = scoring.rank(options, risks, c, current.id, priority or data.get_priority())
     return [s.model_dump(mode="json") for s in ranked]
 
 
 @function_tool
 async def rank_options() -> str:
-    """Deterministically score the current trip and all alternatives.
+    """Deterministically rank the current booking and all alternatives for the traveller.
 
-    Returns options sorted by expected loss (lower is better) with P(on time).
-    Always call this before recommending; never compute scores yourself.
+    Options are sorted best-first for the traveller's priority (lowest price, balanced
+    or most reliable) and tagged recommended / cheapest / most_reliable / booked /
+    too_late. Always call this before recommending; never compute scores yourself.
     """
     await ensure_live_fares()
     ranked = await asyncio.to_thread(compute_ranking)
@@ -114,4 +118,4 @@ async def rank_options() -> str:
     )
 
 
-RANK_KEYS = ("p_on_time", "expected_loss_usd", "extra_cost_usd")
+RANK_KEYS = ("p_on_time", "score_usd", "extra_cost_usd", "tags")

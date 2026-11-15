@@ -57,8 +57,17 @@ def index() -> FileResponse:
 
 
 @app.get("/api/state")
-async def state() -> dict[str, Any]:
-    """Snapshot for the dashboard. Live mode fetches Kiwi fares (cached) first."""
+async def state(priority: str | None = None) -> dict[str, Any]:
+    """Snapshot for the dashboard. Live mode fetches Kiwi fares (cached) first.
+
+    `priority` (price | balanced | reliability) re-ranks instantly, without any LLM call,
+    and becomes the traveller's choice for the next guardian run.
+    """
+    if priority:
+        try:
+            data.set_priority(priority)
+        except ValueError as e:
+            raise HTTPException(422, str(e)) from e
     try:
         await ensure_live_fares()
     except Exception as e:  # noqa: BLE001 — show the board without live fares rather than fail
@@ -73,6 +82,7 @@ def _build_state() -> dict[str, Any]:
     airports = sorted({a for r in ranking for a in r["option"]["airports"]})
     return {
         "mode": settings().data_mode,
+        "priority": data.get_priority(),
         "routing": describe_routing(),
         "coords": {a: AIRPORT_COORDS.get(a) for a in airports},
         "tz": {a: AIRPORTS[a][2] for a in airports if a in AIRPORTS},
@@ -136,7 +146,7 @@ async def _run_events():
                 agent = build_agents(mcp, hooks=hooks)
                 result = await Runner.run(
                     agent,
-                    "Check my upcoming trip and protect my meeting.",
+                    "Check my upcoming trip and find the best way to get me to my event on time.",
                     max_turns=20,
                     hooks=hooks,
                 )
