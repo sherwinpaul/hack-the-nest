@@ -5,8 +5,10 @@ Gemini handles high-volume sub-agents (weather, intel summaries, fare normalisat
 Gemini is reached through its OpenAI-compatible endpoint, so every agent uses the same SDK.
 """
 
+from functools import lru_cache
 from typing import Literal
 
+import httpx
 from agents import (
     Model,
     ModelRetrySettings,
@@ -18,6 +20,7 @@ from agents import (
 from openai import AsyncOpenAI
 
 from guardian.config import settings
+from guardian.keypool import KeyPool, KeyRotatingTransport, parse_keys
 
 Provider = Literal["openai", "gemini", "gemini_lite"]
 
@@ -59,10 +62,25 @@ def model_for(role: str) -> Model:
             raise RuntimeError("Set OPENAI_API_KEY or GEMINI_API_KEY in .env")
         client = AsyncOpenAI(api_key=s.openai_api_key)
     else:
-        if not s.gemini_api_key:
-            raise RuntimeError("Set GEMINI_API_KEY or OPENAI_API_KEY in .env")
-        client = AsyncOpenAI(api_key=s.gemini_api_key, base_url=GEMINI_BASE_URL)
+        client = gemini_client()
     return OpenAIChatCompletionsModel(model=_model_name(provider), openai_client=client)
+
+
+@lru_cache
+def gemini_pool() -> KeyPool:
+    keys = parse_keys(settings().gemini_api_key)
+    if not keys:
+        raise RuntimeError("Set GEMINI_API_KEY or OPENAI_API_KEY in .env")
+    return KeyPool(keys)
+
+
+@lru_cache
+def gemini_client() -> AsyncOpenAI:
+    """One shared client: all Gemini agents use the same key pool, comma-separated in .env."""
+    pool = gemini_pool()
+    http = httpx.AsyncClient(transport=KeyRotatingTransport(pool), timeout=120)
+    # The transport sets the real key per request; api_key here is only a placeholder.
+    return AsyncOpenAI(api_key=pool.key(0), base_url=GEMINI_BASE_URL, http_client=http)
 
 
 def model_settings() -> ModelSettings:
