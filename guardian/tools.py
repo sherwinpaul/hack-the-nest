@@ -1,11 +1,14 @@
 """Function tools exposed to agents. Thin wrappers over guardian.data and guardian.scoring."""
 
+import asyncio
 import json
 from datetime import datetime
 
 from agents import function_tool
 
 from guardian import data, scoring
+from guardian.config import settings
+from guardian.schemas import ScoredOption
 
 
 @function_tool
@@ -32,9 +35,37 @@ def get_airport_weather_risk(airport: str, when_iso: str) -> str:
 
 
 @function_tool
-def search_alternative_trips() -> str:
-    """Search alternative itineraries to the meeting city (Kiwi/Duffel in live mode)."""
-    return json.dumps([o.model_dump(mode="json") for o in data.load_alternatives()])
+async def search_alternative_trips() -> str:
+    """Search alternative itineraries that land before the meeting deadline.
+
+    Live mode queries Kiwi.com (via its MCP server) twice: all flights that arrive in
+    time, and the same while never connecting through high-risk hubs.
+    """
+    if settings().data_mode == "live":
+        await data.refresh_live_fares()
+    options = data.load_alternatives()
+    if not options:
+        return "No alternative flights found that arrive before the deadline."
+    return json.dumps([_brief(o) for o in options])
+
+
+def _brief(o) -> dict:
+    """Compact view for the LLM: enough to reason about, small enough to stay cheap."""
+    return {
+        "id": o.id,
+        "route": " > ".join(o.airports),
+        "flights": [leg.flight_no for leg in o.legs],
+        "departs_utc": o.legs[0].depart.isoformat(),
+        "arrives_utc": o.arrive.isoformat(),
+        "price_usd": o.price_usd,
+        "source": o.source,
+    }
+
+
+async def ensure_live_fares() -> None:
+    """Live mode: make sure a Kiwi search has populated the alternatives."""
+    if settings().data_mode == "live" and not data.load_alternatives():
+        await data.refresh_live_fares()
 
 
 @function_tool
@@ -55,10 +86,20 @@ def compute_ranking() -> list[dict]:
 
 
 @function_tool
-def rank_options() -> str:
+async def rank_options() -> str:
     """Deterministically score the current trip and all alternatives.
 
     Returns options sorted by expected loss (lower is better) with P(on time).
     Always call this before recommending; never compute scores yourself.
     """
-    return json.dumps(compute_ranking())
+    await ensure_live_fares()
+    ranked = await asyncio.to_thread(compute_ranking)
+    return json.dumps(
+        [
+            {**_brief(ScoredOption.model_validate(r).option), **{k: r[k] for k in RANK_KEYS}}
+            for r in ranked[:8]
+        ]
+    )
+
+
+RANK_KEYS = ("p_on_time", "expected_loss_usd", "extra_cost_usd")

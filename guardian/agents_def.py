@@ -75,8 +75,7 @@ def build_agents(
             "preferring routes that avoid the airports at risk. Return a concise list with price, "
             "route and arrival time."
         ),
-        tools=[] if live and "kiwi" in mcp else [tools.search_alternative_trips],
-        mcp_servers=[mcp["kiwi"]] if live and "kiwi" in mcp else [],
+        tools=[tools.search_alternative_trips],
     )
 
     comms = Agent(

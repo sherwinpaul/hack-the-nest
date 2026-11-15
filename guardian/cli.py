@@ -14,7 +14,7 @@ from guardian import booking, data
 from guardian.config import settings
 from guardian.models import configure_tracing, describe_routing
 from guardian.schemas import ScoredOption
-from guardian.tools import compute_ranking
+from guardian.tools import compute_ranking, ensure_live_fares
 
 
 def print_ranking(ranked: list[ScoredOption]) -> None:
@@ -39,7 +39,7 @@ async def list_mcp_tools() -> None:
     from guardian.mcp_servers import connect_all
 
     async with AsyncExitStack() as stack:
-        for name, srv in (await connect_all(stack)).items():
+        for name, srv in (await connect_all(stack, include_kiwi=True)).items():
             print(f"\n[{name}]")
             for t in await srv.list_tools():
                 print(f"  - {t.name}: {(t.description or '')[:80]}")
@@ -77,6 +77,7 @@ def main() -> None:
     p.add_argument("--list-mcp-tools", action="store_true")
     a = p.parse_args()
     if a.dry:
+        asyncio.run(ensure_live_fares())  # no-op in replay mode
         dry_run()
     elif a.list_mcp_tools:
         asyncio.run(list_mcp_tools())

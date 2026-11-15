@@ -5,6 +5,9 @@ from guardian.schemas import TravelOption
 
 
 def book(option: TravelOption) -> str:
+    if option.source == "kiwi" and option.booking_ref.startswith("https://"):
+        # We never take payment: the traveller completes the purchase on Kiwi.com.
+        return f"Opening Kiwi.com to complete {option.legs[0].flight_no} for ${option.price_usd:.0f}"
     token = settings().duffel_access_token
     if not token:
         return f"[simulated] Would book {option.id} via {option.source} for ${option.price_usd:.0f}"

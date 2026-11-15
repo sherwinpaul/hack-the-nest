@@ -22,11 +22,12 @@ from pydantic import BaseModel
 
 from guardian import booking, data
 from guardian.agents_def import build_agents
+from guardian.airports import AIRPORT_COORDS, AIRPORTS
 from guardian.config import settings
 from guardian.mcp_servers import connect_all
 from guardian.models import configure_tracing, describe_routing
 from guardian.schemas import ScoredOption
-from guardian.tools import compute_ranking
+from guardian.tools import compute_ranking, ensure_live_fares
 from guardian.trace import TraceHooks
 
 WEB = Path(__file__).parent / "web"
@@ -35,6 +36,7 @@ app = FastAPI(title="Trip Guardian")
 app.mount("/static", StaticFiles(directory=WEB), name="static")
 configure_tracing()
 _run_lock = asyncio.Lock()
+log = logging.getLogger("guardian.server")
 
 
 @app.get("/")
@@ -44,7 +46,16 @@ def index() -> FileResponse:
 
 
 @app.get("/api/state")
-def state() -> dict[str, Any]:
+async def state() -> dict[str, Any]:
+    """Snapshot for the dashboard. Live mode fetches Kiwi fares (cached) first."""
+    try:
+        await ensure_live_fares()
+    except Exception as e:  # noqa: BLE001 — show the board without live fares rather than fail
+        log.warning("Live fare search failed: %s", e)
+    return await asyncio.to_thread(_build_state)
+
+
+def _build_state() -> dict[str, Any]:
     c = data.load_commitment()
     trip = data.load_current_trip()
     ranking = compute_ranking()
@@ -52,7 +63,8 @@ def state() -> dict[str, Any]:
     return {
         "mode": settings().data_mode,
         "routing": describe_routing(),
-        "coords": {a: data.AIRPORT_COORDS.get(a) for a in airports},
+        "coords": {a: AIRPORT_COORDS.get(a) for a in airports},
+        "tz": {a: AIRPORTS[a][2] for a in airports if a in AIRPORTS},
         "commitment": c.model_dump(mode="json"),
         "current_trip": trip.model_dump(mode="json"),
         "risks": {
@@ -68,11 +80,12 @@ class Approval(BaseModel):
 
 
 @app.post("/api/approve")
-def approve(body: Approval) -> dict[str, str]:
-    for r in compute_ranking():
+async def approve(body: Approval) -> dict[str, str]:
+    for r in await asyncio.to_thread(compute_ranking):
         if r["option"]["id"] == body.option_id:
             option = ScoredOption.model_validate(r).option
-            return {"status": "ok", "message": booking.book(option)}
+            url = option.booking_ref if option.booking_ref.startswith("https://") else ""
+            return {"status": "ok", "message": booking.book(option), "url": url}
     raise HTTPException(404, f"Unknown option {body.option_id}")
 
 

@@ -40,13 +40,21 @@ def kiwi_server() -> MCPServerStreamableHttp:
         params={"url": settings().kiwi_mcp_url},
         cache_tools_list=True,
         client_session_timeout_seconds=60,
+        # never expose feedback-to-devs: it would let an agent post messages to Kiwi
+        tool_filter=create_static_tool_filter(allowed_tool_names=["search-flight"]),
     )
 
 
-async def connect_all(stack: AsyncExitStack) -> dict[str, MCPServerStreamableHttp]:
-    """Connect the servers this mode needs; a failed server is skipped, not fatal."""
+async def connect_all(
+    stack: AsyncExitStack, include_kiwi: bool = False
+) -> dict[str, MCPServerStreamableHttp]:
+    """Connect agent-facing servers; a failed server is skipped, not fatal.
+
+    Kiwi is normally called from code (guardian/kiwi.py) so fares are parsed and ranked
+    deterministically; include_kiwi is for inspecting its tools.
+    """
     wanted = [("exa", exa_server())]
-    if settings().data_mode == "live":
+    if include_kiwi:
         wanted.append(("kiwi", kiwi_server()))
     servers = {}
     for name, srv in wanted:
