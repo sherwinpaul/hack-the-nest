@@ -155,5 +155,5 @@ def test_live_keys_are_refused(monkeypatch):
                            stripe_publishable_key="pk_live_x")
     monkeypatch.setattr(payments, "settings", lambda: fake)
     ok, why = payments.enabled()
-    assert not ok and "test keys" in why
+    assert not ok and "pk_test_" in why
     assert config  # imported for clarity: settings come from guardian.config

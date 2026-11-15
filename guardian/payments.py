@@ -58,8 +58,11 @@ def enabled() -> tuple[bool, str]:
     ]
     if missing:
         return False, "Add " + ", ".join(missing) + " to .env to enable in-app booking"
-    if not s.stripe_secret_key.startswith("sk_test_") or not s.stripe_publishable_key.startswith("pk_test_"):
-        return False, "Only Stripe test keys (sk_test_ / pk_test_) are allowed in this prototype"
+    if not s.stripe_publishable_key.startswith("pk_test_"):
+        return False, "STRIPE_PUBLISHABLE_KEY must be the test publishable key (pk_test_...)"
+    # A restricted key (rk_test_) works too if it can write PaymentIntents and Refunds.
+    if not s.stripe_secret_key.startswith(("sk_test_", "rk_test_")):
+        return False, "Only Stripe test keys (sk_test_ or rk_test_) are allowed in this prototype"
     if not s.duffel_access_token.startswith("duffel_test_"):
         return False, "Only Duffel test tokens (duffel_test_) are allowed in this prototype"
     return True, ""
