@@ -121,7 +121,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.02em; }
 .tags { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .reco { position: relative; overflow: hidden; border-color: var(--blue-100); background:
-  radial-gradient(600px 220px at 100% 0%, rgba(37, 99, 235, 0.08), transparent 70%), #fff; }
+  radial-gradient(600px 220px at 100% 0%, rgba(37, 99, 235, 0.08), transparent 70%), rgba(255, 255, 255, 0.78); }
 .reco-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .reco h2 { font-size: 28px; font-weight: 750; line-height: 1.2; margin-top: 14px; }
 .reco-sub { color: var(--ink-2); margin: 6px 0 0; font-size: 15px; }
