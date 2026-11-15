@@ -128,6 +128,25 @@
     <button class="intro-skip" id="intro-skip" type="button">Skip</button>
   </div>
 
+  <!-- Ambient sky: slow drifting clouds behind the dashboard -->
+  <div class="sky" aria-hidden="true">
+    <svg width="0" height="0" style="position:absolute">
+      <defs>
+        <symbol id="cloud" viewBox="0 0 220 100">
+          <path d="M44 92 C18 92 6 76 8 62 C10 46 26 38 40 40 C42 20 62 8 84 12 C98 -2 132 0 144 22 C166 14 192 28 192 50 C212 52 216 70 210 80 C204 90 192 92 182 92 Z"/>
+        </symbol>
+      </defs>
+    </svg>
+    <svg class="cloud far f1" viewBox="0 0 220 100"><use href="#cloud"/></svg>
+    <svg class="cloud far f2" viewBox="0 0 220 100"><use href="#cloud"/></svg>
+    <svg class="cloud far f3" viewBox="0 0 220 100"><use href="#cloud"/></svg>
+    <svg class="cloud far f4" viewBox="0 0 220 100"><use href="#cloud"/></svg>
+    <svg class="cloud near n1" viewBox="0 0 220 100"><use href="#cloud"/></svg>
+    <svg class="cloud near n2" viewBox="0 0 220 100"><use href="#cloud"/></svg>
+    <svg class="cloud near n3" viewBox="0 0 220 100"><use href="#cloud"/></svg>
+    <svg class="cloud near n4" viewBox="0 0 220 100"><use href="#cloud"/></svg>
+  </div>
+
   <header class="nav">
     <div class="nav-inner">
       <a class="logo" href="/">
