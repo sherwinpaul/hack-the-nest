@@ -7,6 +7,7 @@
 
 import argparse
 import asyncio
+import logging
 from contextlib import AsyncExitStack
 
 from guardian import booking, data
@@ -69,6 +70,7 @@ async def agent_run() -> None:
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.WARNING, format="[%(name)s] %(message)s")
     p = argparse.ArgumentParser(prog="guardian")
     p.add_argument("--dry", action="store_true", help="deterministic ranking only, no LLM")
     p.add_argument("--list-mcp-tools", action="store_true")

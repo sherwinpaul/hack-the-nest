@@ -78,7 +78,10 @@ def gemini_pool() -> KeyPool:
 def gemini_client() -> AsyncOpenAI:
     """One shared client: all Gemini agents use the same key pool, comma-separated in .env."""
     pool = gemini_pool()
-    http = httpx.AsyncClient(transport=KeyRotatingTransport(pool), timeout=120)
+    s = settings()
+    fallbacks = {s.gemini_model: s.gemini_lite_model} if s.gemini_model != s.gemini_lite_model else {}
+    transport = KeyRotatingTransport(pool, model_fallbacks=fallbacks)
+    http = httpx.AsyncClient(transport=transport, timeout=120)
     # The transport sets the real key per request; api_key here is only a placeholder.
     return AsyncOpenAI(api_key=pool.key(0), base_url=GEMINI_BASE_URL, http_client=http)
 
