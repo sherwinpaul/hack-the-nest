@@ -358,7 +358,7 @@
     const isCurrent = r.option.id === state.current_trip.id;
     $("#selected-label").innerHTML = `<b>${esc(flightNo(r.option))}</b> · ${esc(r.option.airports.join(" → "))} · ${pct(r.p_on_time)} on time · ${usd(r.option.price_usd)}`;
     btn.disabled = isCurrent || r.p_on_time === 0;
-    btn.textContent = isCurrent ? "Already booked" : r.option.source === "kiwi" ? "Book on Kiwi.com" : "Book selected";
+    btn.textContent = isCurrent ? "Already booked" : state.payments?.enabled ? "Book & pay" : r.option.source === "kiwi" && state.mode === "live" ? "Book on Kiwi.com" : "Book selected";
   }
 
   // ---------- booking ----------
@@ -370,7 +370,8 @@
     const how = o.source === "kiwi"
       ? "You'll finish the purchase on Kiwi.com. Trip Guardian never takes payment."
       : state.mode === "replay" ? "Replay mode: this booking is simulated." : "Duffel test mode only.";
-    $("#confirm-body").textContent = `${usd(o.price_usd)}, lands ${local(o.arrive, o.airports.at(-1))} with a ${pct(r.p_on_time)} chance of arriving on time. ${how}`;
+    const payNote = state.payments && !state.payments.enabled ? ` In-app payment is off: ${state.payments.reason}.` : "";
+    $("#confirm-body").textContent = `${usd(o.price_usd)}, lands ${local(o.arrive, o.airports.at(-1))} with a ${pct(r.p_on_time)} chance of arriving on time. ${how}${payNote}`;
     $("#confirm-ok").textContent = o.source === "kiwi" ? "Continue to Kiwi.com" : "Confirm booking";
     const dlg = $("#confirm");
     dlg.returnValue = "";
@@ -397,6 +398,137 @@
     clearTimeout(toast._t);
     toast._t = setTimeout(() => t.classList.remove("show"), 8000);
   }
+
+  // ---------- in-app checkout (Duffel order, Stripe payment) ----------
+  const co = { id: null, passenger: null, stripe: null, elements: null, offer: null, busy: false };
+  const coDlg = () => $("#checkout");
+
+  function book(id) {
+    if (!id) return;
+    if (state.payments?.enabled) return openCheckout(id);
+    openConfirm(id); // hand-off flow: kiwi.com link (live) or simulated (replay)
+  }
+
+  function coStep(step) {
+    const order = ["details", "pay", "done"];
+    document.querySelectorAll(".co-steps li").forEach((li) => {
+      const i = order.indexOf(li.dataset.step), cur = order.indexOf(step);
+      li.className = i < cur ? "complete" : i === cur ? "active" : "";
+    });
+    document.querySelectorAll("#checkout [data-pane]").forEach((p) => (p.hidden = p.dataset.pane !== step));
+  }
+
+  function money(amount, currency) {
+    try { return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(Number(amount)); }
+    catch { return `${amount} ${currency}`; }
+  }
+
+  async function openCheckout(id) {
+    const r = byId(id);
+    if (!r || co.busy) return;
+    co.busy = true;
+    const dlg = coDlg();
+    $("#co-title").textContent = `${flightNo(r.option)} · ${r.option.airports.join(" → ")}`;
+    $("#co-summary").innerHTML = '<span class="muted">Checking live availability and the latest price…</span>';
+    $("#co-note").hidden = true;
+    $("#co-details-error").textContent = "";
+    $("#co-pay-error").textContent = "";
+    coStep("details");
+    $("#co-continue").disabled = true;
+    dlg.showModal();
+    try {
+      const res = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ option_id: id }) });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.detail || res.statusText);
+      co.id = body.checkout_id;
+      co.offer = body.offer;
+      co.clientSecret = body.client_secret;
+      co.publishableKey = body.publishable_key;
+      const o = body.offer;
+      $("#co-summary").innerHTML = `
+        <span class="co-flight">${esc(o.airline)} · ${esc(o.flights.join(" + "))}</span>
+        <span class="co-total">${esc(money(o.total_amount, o.total_currency))}</span>
+        <span class="muted">${esc(o.route.join(" → "))} · ${esc(local(o.departs, o.route[0]))} → ${esc(local(o.arrives, o.route.at(-1), false))}</span>`;
+      if (body.substitute) {
+        $("#co-note").hidden = false;
+        $("#co-note").textContent = `Test mode: Duffel's sandbox only sells its test airline, so this books ${o.airline} ${o.flights.join(" + ")} on the same route and day. With live keys it books ${flightNo(r.option)} itself. No real money moves.`;
+      } else if (body.test_mode) {
+        $("#co-note").hidden = false;
+        $("#co-note").textContent = "Test mode: no real money moves and no real ticket is issued.";
+      }
+      $("#co-paybtn").textContent = `Pay ${money(o.total_amount, o.total_currency)}`;
+      $("#co-continue").disabled = false;
+    } catch (e) {
+      $("#co-summary").innerHTML = `<span class="co-error">${esc(e.message)}</span>`;
+    } finally {
+      co.busy = false;
+    }
+  }
+
+  async function submitDetails(ev) {
+    ev.preventDefault();
+    const passenger = Object.fromEntries(new FormData($("#co-details")).entries());
+    $("#co-details-error").textContent = "";
+    const res = await fetch("/api/passenger/validate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(passenger) });
+    const body = await res.json();
+    if (!res.ok) { $("#co-details-error").textContent = body.detail || "Please check your details."; return; }
+    co.passenger = body.passenger;
+    await mountPayment();
+    coStep("pay");
+  }
+
+  function loadStripe() {
+    if (window.Stripe) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://js.stripe.com/v3/"; // must load from Stripe's own domain
+      s.onload = resolve;
+      s.onerror = () => reject(new Error("Could not load Stripe"));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function mountPayment() {
+    await loadStripe();
+    co.stripe = window.Stripe(co.publishableKey);
+    co.elements = co.stripe.elements({
+      clientSecret: co.clientSecret,
+      appearance: { theme: "stripe", variables: { colorPrimary: "#2563eb", borderRadius: "10px", fontFamily: "Inter, system-ui, sans-serif" } },
+    });
+    $("#payment-element").innerHTML = "";
+    co.elements.create("payment", { layout: "tabs" }).mount("#payment-element");
+  }
+
+  async function submitPayment(ev) {
+    ev.preventDefault();
+    const btn = $("#co-paybtn");
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = "Processing…";
+    $("#co-pay-error").textContent = "";
+    try {
+      const { error } = await co.stripe.confirmPayment({ elements: co.elements, redirect: "if_required" });
+      if (error) throw new Error(error.message || "Payment failed");
+      btn.textContent = "Confirming with the airline…";
+      const res = await fetch("/api/book", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ checkout_id: co.id, passenger: co.passenger }) });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.detail || res.statusText);
+      $("#co-pnr").textContent = body.booking_reference || "—";
+      $("#co-done-text").textContent = `${body.airline || ""} ${body.flights.join(" + ")} is confirmed for ${body.total}.${body.test_mode ? " (Test booking: no real ticket.)" : ""}`;
+      coStep("done");
+      toast(`Booked: ${body.booking_reference}`);
+    } catch (e) {
+      $("#co-pay-error").textContent = e.message;
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  }
+
+  $("#co-details").addEventListener("submit", submitDetails);
+  $("#co-pay").addEventListener("submit", submitPayment);
+  $("#co-back").addEventListener("click", () => coStep("details"));
+  $("#co-close").addEventListener("click", () => coDlg().close());
+  document.querySelectorAll("#checkout [data-close]").forEach((b) => b.addEventListener("click", () => coDlg().close()));
 
   // ---------- friendly progress ----------
   const progItems = {};
@@ -545,8 +677,8 @@
   }
 
   $("#engage").addEventListener("click", run);
-  $("#approve").addEventListener("click", () => openConfirm(selectedId));
-  $("#reco-book").addEventListener("click", () => openConfirm(pick()?.option.id));
+  $("#approve").addEventListener("click", () => book(selectedId));
+  $("#reco-book").addEventListener("click", () => book(pick()?.option.id));
   document.querySelectorAll("#priority button").forEach((b) => b.addEventListener("click", () => setPriority(b.dataset.p)));
   $("#copy-host").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText($("#host-msg").value); toast("Message copied"); }

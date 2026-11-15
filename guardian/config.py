@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     exa_mcp_url: str = "https://mcp.exa.ai/mcp"
     kiwi_mcp_url: str = "https://mcp.kiwi.com"
     duffel_access_token: str = ""
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
 
     data_mode: Literal["replay", "live"] = "replay"
     replay_scenario: str = "storm_ord"

@@ -20,13 +20,13 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from guardian import booking, data
+from guardian import booking, data, duffel, kiwi, payments
 from guardian.agents_def import build_agents
 from guardian.airports import AIRPORT_COORDS, AIRPORTS
 from guardian.config import settings
 from guardian.mcp_servers import connect_all
 from guardian.models import configure_tracing, describe_routing
-from guardian.schemas import ScoredOption
+from guardian.schemas import ScoredOption, TravelOption
 from guardian.tools import compute_ranking, ensure_live_fares
 from guardian.trace import TraceHooks
 
@@ -93,6 +93,7 @@ def _build_state() -> dict[str, Any]:
             for a in airports
         },
         "ranking": ranking,
+        "payments": dict(zip(("enabled", "reason"), payments.enabled(), strict=True)),
     }
 
 
@@ -100,14 +101,69 @@ class Approval(BaseModel):
     option_id: str
 
 
+async def _find_option(option_id: str) -> TravelOption:
+    for r in await asyncio.to_thread(compute_ranking):
+        if r["option"]["id"] == option_id:
+            return ScoredOption.model_validate(r).option
+    raise HTTPException(404, f"Unknown option {option_id}")
+
+
 @app.post("/api/approve")
 async def approve(body: Approval) -> dict[str, str]:
-    for r in await asyncio.to_thread(compute_ranking):
-        if r["option"]["id"] == body.option_id:
-            option = ScoredOption.model_validate(r).option
-            url = option.booking_ref if option.booking_ref.startswith("https://") else ""
-            return {"status": "ok", "message": booking.book(option), "url": url}
-    raise HTTPException(404, f"Unknown option {body.option_id}")
+    """Hand-off booking: a fresh kiwi.com link in live mode, simulated in replay."""
+    option = await _find_option(body.option_id)
+    url = ""
+    if option.source == "kiwi" and settings().data_mode == "live":
+        url = await _fresh_kiwi_link(option)
+    return {"status": "ok", "message": booking.book(option), "url": url}
+
+
+async def _fresh_kiwi_link(option: TravelOption) -> str:
+    """Kiwi booking links carry a short-lived token: re-search if ours is old."""
+    if kiwi.links_stale():
+        await data.refresh_live_fares(force=True)
+    sig = [leg.flight_no for leg in option.legs]
+    for o in data.load_alternatives():
+        if [leg.flight_no for leg in o.legs] == sig and o.booking_ref.startswith("https://"):
+            return o.booking_ref
+    raise HTTPException(409, "That fare is no longer available on Kiwi.com. Refresh the options.")
+
+
+class CheckoutRequest(BaseModel):
+    option_id: str
+
+
+class BookRequest(BaseModel):
+    checkout_id: str
+    passenger: dict[str, str]
+
+
+@app.post("/api/checkout")
+async def checkout(body: CheckoutRequest) -> dict[str, Any]:
+    """Start in-app checkout: find and re-price the Duffel offer, create a Stripe payment."""
+    option = await _find_option(body.option_id)
+    try:
+        return await payments.start_checkout(option)
+    except payments.CheckoutError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+@app.post("/api/passenger/validate")
+async def validate_passenger(passenger: dict[str, str]) -> dict[str, Any]:
+    """Checked before the payment form appears, so nobody pays with unusable details."""
+    try:
+        return {"ok": True, "passenger": duffel.validate_passenger(passenger)}
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from e
+
+
+@app.post("/api/book")
+async def book(body: BookRequest) -> dict[str, Any]:
+    """After the traveller has paid: verify the payment, then create the airline order."""
+    try:
+        return await payments.complete_booking(body.checkout_id, body.passenger)
+    except payments.CheckoutError as e:
+        raise HTTPException(400, str(e)) from e
 
 
 # ---------- live agent run (SSE) ----------

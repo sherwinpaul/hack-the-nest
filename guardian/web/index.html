@@ -190,6 +190,72 @@
     </form>
   </dialog>
 
+  <dialog id="checkout" class="dialog checkout">
+    <div class="co-head">
+      <div>
+        <div class="eyebrow">Book in app</div>
+        <h3 id="co-title">Your flight</h3>
+      </div>
+      <button class="co-close" id="co-close" aria-label="Close">×</button>
+    </div>
+    <ol class="co-steps">
+      <li data-step="details">Your details</li>
+      <li data-step="pay">Payment</li>
+      <li data-step="done">Booked</li>
+    </ol>
+
+    <div class="co-summary" id="co-summary"></div>
+    <div class="co-note" id="co-note" hidden></div>
+
+    <!-- Step 1: passenger -->
+    <form class="co-pane" id="co-details" data-pane="details" novalidate>
+      <p class="muted small">Enter the traveller's details exactly as they appear on their ID.</p>
+      <div class="form-grid">
+        <label>Title
+          <select name="title" required>
+            <option value="">Select</option><option value="mr">Mr</option><option value="ms">Ms</option>
+            <option value="mrs">Mrs</option><option value="miss">Miss</option><option value="dr">Dr</option>
+          </select>
+        </label>
+        <label>Gender (as on ID)
+          <select name="gender" required>
+            <option value="">Select</option><option value="f">Female</option><option value="m">Male</option>
+          </select>
+        </label>
+        <label>First name<input name="given_name" autocomplete="given-name" required /></label>
+        <label>Last name<input name="family_name" autocomplete="family-name" required /></label>
+        <label>Date of birth<input name="born_on" type="date" required /></label>
+        <label>Phone<input name="phone_number" type="tel" autocomplete="tel" placeholder="+1 313 555 0123" required /></label>
+        <label class="span-2">Email<input name="email" type="email" autocomplete="email" required /></label>
+      </div>
+      <div class="co-error" id="co-details-error" role="alert"></div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="co-continue">Continue to payment</button>
+      </div>
+    </form>
+
+    <!-- Step 2: Stripe Payment Element -->
+    <form class="co-pane" id="co-pay" data-pane="pay" hidden>
+      <div id="payment-element" class="payment-element"></div>
+      <div class="co-error" id="co-pay-error" role="alert"></div>
+      <div class="secure"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Card details go straight to Stripe. Trip Guardian never sees them.</div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" id="co-back">Back</button>
+        <button type="submit" class="btn btn-primary" id="co-paybtn">Pay</button>
+      </div>
+    </form>
+
+    <!-- Step 3: confirmation -->
+    <div class="co-pane co-done" data-pane="done" hidden>
+      <div class="done-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg></div>
+      <h3>You're booked</h3>
+      <p class="muted" id="co-done-text"></p>
+      <div class="pnr"><span>Booking reference</span><b id="co-pnr">—</b></div>
+      <div class="dialog-actions"><button type="button" class="btn btn-primary" data-close>Done</button></div>
+    </div>
+  </dialog>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="/static/app.js"></script>
 </body>

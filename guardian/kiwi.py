@@ -32,11 +32,17 @@ MAX_OPTIONS = 12
 
 _cache: dict[str, tuple[float, list[TravelOption]]] = {}
 _last: list[TravelOption] = []
+_last_at = 0.0
+LINK_MAX_AGE = 5 * 60  # Kiwi booking tokens go stale; refresh links older than this
 _lock = asyncio.Lock()
 
 
 def cached_options() -> list[TravelOption]:
     return list(_last)
+
+
+def links_stale() -> bool:
+    return time.monotonic() - _last_at > LINK_MAX_AGE
 
 
 def _flight_no(seg: dict) -> str:
@@ -108,7 +114,7 @@ async def search(
     avoid_hubs: list[str],
     force: bool = False,
 ) -> list[TravelOption]:
-    global _last
+    global _last, _last_at
     origin_tz, dest_tz = tz_for(origin), tz_for(destination)
     if origin_tz is None or dest_tz is None:
         raise ValueError(f"Unknown time zone for {origin} or {destination}; add it to airports.py")
@@ -118,6 +124,7 @@ async def search(
         hit = _cache.get(key)
         if hit and not force and time.monotonic() - hit[0] < CACHE_TTL:
             _last = hit[1]
+            _last_at = hit[0]
             return list(_last)
 
         dep_day = arrive_by.astimezone(origin_tz).strftime("%d/%m/%Y")
@@ -155,5 +162,6 @@ async def search(
         options = sorted(merged.values(), key=lambda o: (o.arrive, o.price_usd))[:MAX_OPTIONS]
         _cache[key] = (time.monotonic(), options)
         _last = options
+        _last_at = time.monotonic()
         log.info("Kiwi returned %d options (avoiding %s)", len(options), avoid_hubs or "none")
         return list(options)

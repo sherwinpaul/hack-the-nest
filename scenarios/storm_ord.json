@@ -20,29 +20,29 @@
   },
   "alternatives": [
     {
-      "id": "alt-F9-nonstop", "mode": "flight", "source": "duffel", "price_usd": 520, "booking_ref": "off_test_f9_nonstop",
+      "id": "alt-F9-nonstop", "mode": "flight", "source": "duffel", "price_usd": 520, "booking_ref": "",
       "legs": [{"origin": "DTW", "destination": "DEN", "depart": "2026-11-17T14:00:00Z", "arrive": "2026-11-17T17:35:00Z", "carrier": "F9", "flight_no": "F9 1702"}]
     },
     {
-      "id": "alt-DL-via-MSP", "mode": "flight", "source": "kiwi", "price_usd": 480, "booking_ref": "https://www.kiwi.com/",
+      "id": "alt-DL-via-MSP", "mode": "flight", "source": "kiwi", "price_usd": 480, "booking_ref": "",
       "legs": [
         {"origin": "DTW", "destination": "MSP", "depart": "2026-11-17T12:30:00Z", "arrive": "2026-11-17T14:40:00Z", "carrier": "DL", "flight_no": "DL 1450"},
         {"origin": "MSP", "destination": "DEN", "depart": "2026-11-17T16:15:00Z", "arrive": "2026-11-17T18:45:00Z", "carrier": "DL", "flight_no": "DL 2210"}
       ]
     },
     {
-      "id": "alt-DL-nonstop-late", "mode": "flight", "source": "kiwi", "price_usd": 390, "booking_ref": "https://www.kiwi.com/",
+      "id": "alt-DL-nonstop-late", "mode": "flight", "source": "kiwi", "price_usd": 390, "booking_ref": "",
       "legs": [{"origin": "DTW", "destination": "DEN", "depart": "2026-11-17T18:00:00Z", "arrive": "2026-11-17T21:45:00Z", "carrier": "DL", "flight_no": "DL 887"}]
     },
     {
-      "id": "alt-AA-via-DFW", "mode": "flight", "source": "google_flights", "price_usd": 430, "booking_ref": "https://www.google.com/travel/flights",
+      "id": "alt-AA-via-DFW", "mode": "flight", "source": "google_flights", "price_usd": 430, "booking_ref": "",
       "legs": [
         {"origin": "DTW", "destination": "DFW", "depart": "2026-11-17T15:00:00Z", "arrive": "2026-11-17T18:10:00Z", "carrier": "AA", "flight_no": "AA 2301"},
         {"origin": "DFW", "destination": "DEN", "depart": "2026-11-17T19:30:00Z", "arrive": "2026-11-17T21:40:00Z", "carrier": "AA", "flight_no": "AA 1187"}
       ]
     },
     {
-      "id": "alt-UA-via-ORD-late", "mode": "flight", "source": "kiwi", "price_usd": 290, "booking_ref": "https://www.kiwi.com/",
+      "id": "alt-UA-via-ORD-late", "mode": "flight", "source": "kiwi", "price_usd": 290, "booking_ref": "",
       "legs": [
         {"origin": "DTW", "destination": "ORD", "depart": "2026-11-17T17:00:00Z", "arrive": "2026-11-17T18:15:00Z", "carrier": "UA", "flight_no": "UA 2290"},
         {"origin": "ORD", "destination": "DEN", "depart": "2026-11-17T19:00:00Z", "arrive": "2026-11-17T23:10:00Z", "carrier": "UA", "flight_no": "UA 610"}
