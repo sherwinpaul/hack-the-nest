@@ -451,7 +451,7 @@
         <span class="muted">${esc(o.route.join(" → "))} · ${esc(local(o.departs, o.route[0]))} → ${esc(local(o.arrives, o.route.at(-1), false))}</span>`;
       if (body.substitute) {
         $("#co-note").hidden = false;
-        $("#co-note").textContent = `Test mode: Duffel's sandbox only sells its test airline, so this books ${o.airline} ${o.flights.join(" + ")} on the same route and day. With live keys it books ${flightNo(r.option)} itself. No real money moves.`;
+        $("#co-note").textContent = `Test mode: ${flightNo(r.option)} isn't in Duffel's sandbox, so this books a sandbox fare (${o.airline} ${o.flights.join(" + ")}) on the same route and day. With live keys it books ${flightNo(r.option)} itself. No real money moves and no real ticket is issued.`;
       } else if (body.test_mode) {
         $("#co-note").hidden = false;
         $("#co-note").textContent = "Test mode: no real money moves and no real ticket is issued.";
