@@ -670,8 +670,41 @@
     if (!byId(selectedId)) selectedId = pick()?.option.id ?? null;
     renderAll();
   }
+  // ---------- intro ----------
+  const INTRO_MS = 6900;
+  const INTRO_CAPTIONS = [[0, "Landing…"], [2400, "Finding your seat…"], [3700, "Getting comfortable…"], [5100, "Your trip is ready"]];
+
+  function playIntro() {
+    const el = $("#intro");
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const off = new URLSearchParams(location.search).get("intro") === "0";
+    if (!el || reduced || off) { el?.remove(); return { done: Promise.resolve(), hide: () => {} }; }
+    const timers = INTRO_CAPTIONS.map(([t, text]) => setTimeout(() => { $("#intro-status").textContent = text; }, t));
+    let skip;
+    const done = new Promise((resolve) => {
+      timers.push(setTimeout(resolve, INTRO_MS));
+      skip = resolve;
+    });
+    $("#intro-skip").addEventListener("click", () => skip());
+    const hide = () => {
+      timers.forEach(clearTimeout);
+      el.classList.add("done");
+      setTimeout(() => el.remove(), 700);
+    };
+    return { done, hide };
+  }
+
   async function boot() {
-    try { await refresh(); } catch (e) { toast(`Could not load data: ${e.message}`, true); return; }
+    const intro = playIntro();
+    let settled = false;
+    const loaded = refresh()
+      .then(() => true, (e) => { toast(`Could not load data: ${e.message}`, true); return false; })
+      .finally(() => { settled = true; });
+    await intro.done;
+    if (!settled && $("#intro-status")) $("#intro-status").textContent = "Checking your flights…"; // live data can be slow
+    const ok = await loaded;
+    intro.hide();
+    if (!ok) return;
     renderPipeline();
     setInterval(tick, 30000);
   }
