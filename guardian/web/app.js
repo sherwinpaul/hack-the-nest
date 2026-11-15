@@ -819,11 +819,11 @@
   // Planes at three depths, launched every so often with random direction and altitude,
   // so the sky never looks like a loop. Far ones fly behind the clouds, near ones in front.
   const DEPTHS = {
-    far:  { weight: 0.4, w: [40, 56],   sec: [38, 46], trail: [140, 190], th: 2,   layer: ".flights-back" },
+    far:  { weight: 0.15, w: [40, 56],   sec: [38, 46], trail: [140, 190], th: 2,   layer: ".flights-back" },
     mid:  { weight: 0.3, w: [80, 100],  sec: [24, 30], trail: [230, 300], th: 3,   layer: ".flights-back" },
-    near: { weight: 0.3, w: [140, 170], sec: [13, 17], trail: [360, 440], th: 4.5, layer: ".flights-front" },
+    near: { weight: 0.55, w: [140, 170], sec: [13, 17], trail: [360, 440], th: 4.5, layer: ".flights-front" },
   };
-  const MAX_PLANES = 3;
+  const MAX_PLANES = 4;
   const rand = (a, b) => a + Math.random() * (b - a);
 
   function pickDepth() {
@@ -872,7 +872,7 @@
       // ?sky=demo: one plane at each depth right away (handy for showing the effect)
       ["far", "mid", "near"].forEach((depth, i) => setTimeout(() => launchPlane(depth, true), 300 + i * 700));
     }
-    setTimeout(() => launchPlane("mid"), 2500); // a first plane soon after load
+    setTimeout(() => launchPlane("near"), 2500); // a close plane soon after load
     const next = () => setTimeout(() => { launchPlane(); next(); }, rand(9000, 20000));
     next();
   }
