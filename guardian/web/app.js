@@ -89,7 +89,10 @@
     if (!p) return;
     const o = p.option;
     const isCurrent = o.id === state.current_trip.id;
-    $("#reco-title").textContent = isCurrent ? "Keep your current booking" : `Switch to ${flightNo(o)} ${via(o).toLowerCase() === "nonstop" ? "nonstop" : via(o)}`;
+    // A small gain earns a softer verb: the guardian should not cry wolf.
+    const gain = p.p_on_time - (cur ? cur.p_on_time : 0);
+    const verb = gain >= 0.1 ? "Switch to" : "Consider switching to";
+    $("#reco-title").textContent = isCurrent ? "Keep your current booking" : `${verb} ${flightNo(o)} ${via(o).toLowerCase() === "nonstop" ? "nonstop" : via(o)}`;
     const slack = new Date(state.commitment.must_arrive_by) - new Date(o.arrive);
     $("#reco-sub").textContent = `Lands ${local(o.arrive, o.airports.at(-1))} · ${span(slack)} before your deadline · ${usd(o.price_usd)}`;
     $("#reco-source").textContent = o.source === "kiwi" ? "Live fare from Kiwi.com" : state.mode === "replay" ? "Sample fare" : `Fare via ${o.source}`;
@@ -107,7 +110,10 @@
       .filter((a) => !o.airports.includes(a))
       .map((a) => [a, state.risks[a]?.disruption_prob ?? 0])
       .sort((a, b) => b[1] - a[1])[0];
-    $("#m-avoid").textContent = avoided ? `${avoided[0]} · ${pct(avoided[1])}` : "None needed";
+    const fewerStops = (cur?.option.legs.length || 0) - o.legs.length;
+    $("#m-avoid").textContent = avoided && avoided[1] >= 0.2
+      ? `${avoided[0]} · ${pct(avoided[1])}`
+      : fewerStops > 0 ? `${fewerStops} connection${fewerStops > 1 ? "s" : ""}` : "None needed";
     const btn = $("#reco-book");
     btn.disabled = isCurrent;
     btn.textContent = isCurrent ? "Already booked" : "Review & book";
@@ -251,7 +257,9 @@
   function statusPill(r, i) {
     if (r.p_on_time === 0) return '<span class="pill pill-gray">Too late</span>';
     if (i === 0) return '<span class="pill pill-blue">Recommended</span>';
-    if (r.option.id === state.current_trip.id) return '<span class="pill pill-red">Booked</span>';
+    if (r.option.id === state.current_trip.id) {
+      return r.p_on_time >= 0.8 ? '<span class="pill pill-gray">Booked</span>' : '<span class="pill pill-red">Booked · at risk</span>';
+    }
     return r.p_on_time >= 0.8 ? '<span class="pill pill-green">Reliable</span>' : '<span class="pill pill-amber">At risk</span>';
   }
   function renderOptions() {

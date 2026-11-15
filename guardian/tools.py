@@ -7,6 +7,7 @@ from datetime import datetime
 from agents import function_tool
 
 from guardian import data, scoring
+from guardian.airports import tz_for
 from guardian.config import settings
 from guardian.schemas import ScoredOption
 
@@ -14,7 +15,17 @@ from guardian.schemas import ScoredOption
 @function_tool
 def get_commitment() -> str:
     """Return the meeting the user must not miss, with deadline and value."""
-    return data.load_commitment().model_dump_json()
+    c = data.load_commitment()
+    return json.dumps(
+        {**c.model_dump(mode="json"), "must_arrive_by_local": _local(c.must_arrive_by, c.airport)}
+    )
+
+
+def _local(when: datetime, airport: str) -> str:
+    """Human time at the airport, e.g. 'Tue Nov 17, 8:30 AM MST' (UTC if the zone is unknown)."""
+    tz = tz_for(airport)
+    t = when.astimezone(tz) if tz else when
+    return t.strftime("%a %b %-d, %-I:%M %p ") + (t.tzname() or "UTC")
 
 
 @function_tool
@@ -55,7 +66,8 @@ def _brief(o) -> dict:
         "id": o.id,
         "route": " > ".join(o.airports),
         "flights": [leg.flight_no for leg in o.legs],
-        "departs_utc": o.legs[0].depart.isoformat(),
+        "departs_local": _local(o.legs[0].depart, o.airports[0]),
+        "arrives_local": _local(o.arrive, o.airports[-1]),
         "arrives_utc": o.arrive.isoformat(),
         "price_usd": o.price_usd,
         "source": o.source,

@@ -34,6 +34,17 @@ WEB = Path(__file__).parent / "web"
 
 app = FastAPI(title="Trip Guardian")
 app.mount("/static", StaticFiles(directory=WEB), name="static")
+
+
+@app.middleware("http")
+async def revalidate_static(request, call_next):
+    """Make browsers revalidate static files, so an updated app.js is never skipped."""
+    response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 configure_tracing()
 _run_lock = asyncio.Lock()
 log = logging.getLogger("guardian.server")
