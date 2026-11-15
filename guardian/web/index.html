@@ -132,6 +132,17 @@
   <div class="sky" aria-hidden="true">
     <svg width="0" height="0" style="position:absolute">
       <defs>
+        <symbol id="jet" viewBox="0 0 140 44">
+          <path d="M58 22 L84 22 L64 40 L54 40 Z" fill="#c8d3e3"/>
+          <path d="M8 18 Q8 14 14 14 L104 14 Q124 14 132 21 Q124 28 104 28 L16 28 Q8 28 8 24 Z" fill="#fbfdff"/>
+          <path d="M12 15 L2 2 L12 2 L32 15 Z" fill="#2563eb"/>
+          <path d="M14 21 L0 18 L4 24 Z" fill="#c8d3e3"/>
+          <path d="M62 20 L90 20 L70 6 L60 6 Z" fill="#e2e8f0"/>
+          <rect x="66" y="27" width="14" height="6" rx="3" fill="#94a3b8"/>
+          <rect x="16" y="22" width="100" height="1.6" rx="0.8" fill="#2563eb" opacity="0.7"/>
+          <g fill="#5b6b86"><circle cx="34" cy="19" r="1.3"/><circle cx="42" cy="19" r="1.3"/><circle cx="50" cy="19" r="1.3"/><circle cx="58" cy="19" r="1.3"/><circle cx="66" cy="19" r="1.3"/><circle cx="74" cy="19" r="1.3"/><circle cx="82" cy="19" r="1.3"/><circle cx="90" cy="19" r="1.3"/><circle cx="98" cy="19" r="1.3"/></g>
+          <path d="M118 17 Q126 17 129 20 L118 20 Z" fill="#334155"/>
+        </symbol>
         <symbol id="cloud" viewBox="0 0 220 100">
           <path d="M44 92 C18 92 6 76 8 62 C10 46 26 38 40 40 C42 20 62 8 84 12 C98 -2 132 0 144 22 C166 14 192 28 192 50 C212 52 216 70 210 80 C204 90 192 92 182 92 Z"/>
         </symbol>
@@ -141,6 +152,9 @@
     <svg class="cloud far f2" viewBox="0 0 220 100"><use href="#cloud"/></svg>
     <svg class="cloud far f3" viewBox="0 0 220 100"><use href="#cloud"/></svg>
     <svg class="cloud far f4" viewBox="0 0 220 100"><use href="#cloud"/></svg>
+    <!-- Occasional fly-bys, between the far and near cloud layers -->
+    <div class="flight flight-a"><span class="trail"></span><svg class="jet" viewBox="0 0 140 44"><use href="#jet"/></svg></div>
+    <div class="flight flight-b"><span class="trail"></span><svg class="jet" viewBox="0 0 140 44"><use href="#jet"/></svg></div>
     <svg class="cloud near n1" viewBox="0 0 220 100"><use href="#cloud"/></svg>
     <svg class="cloud near n2" viewBox="0 0 220 100"><use href="#cloud"/></svg>
     <svg class="cloud near n3" viewBox="0 0 220 100"><use href="#cloud"/></svg>
@@ -166,6 +180,12 @@
   </header>
 
   <main class="page">
+    <!-- Open sky band: headline over the sky, where the fly-bys are visible -->
+    <section class="sky-band">
+      <h1 id="band-title">Your trip</h1>
+      <p id="band-sub">We watch the weather, the airlines and the news along your route, so you get there on time.</p>
+    </section>
+
     <!-- Hero -->
     <section class="hero">
       <div class="card commitment">

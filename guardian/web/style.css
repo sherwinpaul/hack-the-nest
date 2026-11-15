@@ -69,7 +69,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.02em; }
 .pill-gray { background: #f1f3f6; color: var(--ink-2); }
 
 /* ---------- Nav ---------- */
-.nav { position: sticky; top: 0; z-index: 10; background: rgba(236, 244, 255, 0.72); backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--line); }
+.nav { position: sticky; top: 0; z-index: 10; background: rgba(240, 246, 255, 0.78); backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--line); }
 .nav-inner { max-width: 1280px; margin: 0 auto; padding: 12px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; color: var(--ink); text-decoration: none; letter-spacing: -0.01em; }
 .logo-mark { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(140deg, #3b82f6, #1d4ed8); display: grid; place-items: center; box-shadow: 0 4px 10px -4px rgba(37, 99, 235, 0.6); }
@@ -328,21 +328,27 @@ table.options { width: 100%; border-collapse: separate; border-spacing: 0; font-
 .co-done .dialog-actions { justify-content: center; }
 @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } .form-grid .span-2 { grid-column: auto; } }
 
+/* ---------- Sky band (headline over open sky) ---------- */
+.sky-band { padding: 34px 4px 46px; color: #fff; text-shadow: 0 1px 12px rgba(20, 50, 110, 0.25); }
+.sky-band h1 { font-size: 34px; font-weight: 750; letter-spacing: -0.025em; line-height: 1.15; }
+.sky-band p { margin: 8px 0 0; font-size: 16px; max-width: 620px; color: rgba(255, 255, 255, 0.92); }
+@media (max-width: 640px) { .sky-band { padding: 18px 2px 26px; } .sky-band h1 { font-size: 26px; } .sky-band p { font-size: 14.5px; } }
+
 /* ---------- Ambient sky ---------- */
 .sky {
   position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
   background:
-    radial-gradient(900px 420px at 85% -8%, rgba(255, 244, 214, 0.75), transparent 70%),
-    linear-gradient(180deg, #d6e7ff 0%, #e6f0ff 38%, #eef4fc 70%, #f3f6fa 100%);
+    radial-gradient(900px 420px at 85% -8%, rgba(255, 240, 205, 0.55), transparent 70%),
+    linear-gradient(180deg, #5b9be6 0%, #7fb2ee 22%, #a8cbf4 48%, #cfe2f9 74%, #e6f0fb 100%);
 }
 .cloud {
   position: absolute; left: 0; fill: #fff; will-change: transform;
   animation: cloud-drift linear infinite;
 }
 /* Distant layer: small, faint, slow */
-.cloud.far { width: 190px; opacity: 0.6; filter: blur(0.6px); }
+.cloud.far { width: 190px; opacity: 0.7; filter: blur(0.6px); }
 /* Near layer: larger, brighter, a little faster, soft shadow for depth */
-.cloud.near { width: 340px; opacity: 0.92; filter: drop-shadow(0 14px 22px rgba(37, 99, 235, 0.08)); }
+.cloud.near { width: 340px; opacity: 0.95; filter: drop-shadow(0 14px 24px rgba(20, 60, 140, 0.16)); }
 .f1 { top: 7vh;  --x: 12vw; animation-duration: 260s; animation-delay: -60s; }
 .f2 { top: 26vh; --x: 58vw; animation-duration: 230s; animation-delay: -150s; width: 160px; }
 .f3 { top: 52vh; --x: 30vw; animation-duration: 250s; animation-delay: -20s; }
@@ -357,6 +363,37 @@ table.options { width: 100%; border-collapse: separate; border-spacing: 0; font-
 }
 @media (prefers-reduced-motion: reduce) {
   .cloud { transform: translateX(var(--x)); } /* still sky: clouds placed, not moving */
+  .flight { display: none; }
+}
+
+/* Occasional airliner fly-by with a fading contrail. Each cycle is long:
+   the crossing takes the first part, then the plane waits off-screen. */
+.flight {
+  position: absolute; left: 0; display: flex; align-items: center;
+  transform: translateX(-30vw); will-change: transform;
+}
+.flight .jet { display: block; width: 92px; filter: drop-shadow(0 4px 6px rgba(20, 50, 110, 0.18)); }
+.flight .trail {
+  display: block; width: 300px; height: 3px; margin-right: -6px; border-radius: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.85));
+  filter: blur(0.6px);
+}
+/* Flight A: left to right, gently climbing, about once a minute */
+.flight-a { top: 206px; animation: fly-east 62s linear 4s infinite; }
+/* Flight B: right to left, higher and farther away (smaller, fainter), offset schedule */
+.flight-b { top: 78px; opacity: 0.8; animation: fly-west 97s linear 38s infinite; }
+.flight-b .jet { width: 62px; transform: scaleX(-1); }
+.flight-b { flex-direction: row-reverse; }
+.flight-b .trail { width: 220px; margin: 0 0 0 -4px; background: linear-gradient(270deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.8)); }
+@keyframes fly-east {
+  0%   { transform: translate(-420px, 0) rotate(-1.5deg); }
+  30%  { transform: translate(calc(100vw + 40px), -40px) rotate(-1.5deg); }
+  100% { transform: translate(calc(100vw + 40px), -40px) rotate(-1.5deg); }
+}
+@keyframes fly-west {
+  0%   { transform: translate(calc(100vw + 40px), 0) rotate(1deg); }
+  24%  { transform: translate(-360px, 18px) rotate(1deg); }
+  100% { transform: translate(-360px, 18px) rotate(1deg); }
 }
 
 /* ---------- Intro: landing → cabin → seat → tray → meal ---------- */

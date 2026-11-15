@@ -97,6 +97,7 @@
     $("#env-label").textContent = live ? "Live data" : "Replay · sample scenario";
     const c = state.commitment;
     $("#c-title").textContent = c.title;
+    $("#band-title").textContent = `Your trip to ${c.city}`;
     $("#c-where").textContent = `${c.city} · ${c.airport}`;
     $("#c-deadline").textContent = local(c.must_arrive_by, c.airport);
     tick();
