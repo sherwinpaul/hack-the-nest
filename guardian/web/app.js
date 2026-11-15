@@ -14,17 +14,42 @@
     scale: '<path d="M3 20h18"/><path d="M6 20V10m6 10V4m6 16v-7"/>',
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
     check: '<path d="m5 12.5 4.5 4.5L19 7"/>',
+    close: '<path d="M6 6l12 12M18 6 6 18"/>',
   };
   const svgIcon = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>`;
 
   const STEPS = [
-    { key: "orchestrator", name: "Trip Guardian", icon: "shield", color: "#2563eb" },
-    { key: "weather", name: "Weather risk", icon: "cloud", color: "#0ea5e9", tool: "weather_risk" },
-    { key: "intel", name: "Web intel", icon: "search", color: "#6d4fd8", tool: "web_intel" },
-    { key: "fares", name: "Fare search", icon: "plane", color: "#0d9488", tool: "fare_search" },
-    { key: "scoring", name: "Scoring", icon: "scale", color: "#475467", tool: "rank_options", model: "Deterministic code" },
-    { key: "comms", name: "Host message", icon: "mail", color: "#db2777", tool: "draft_host_message" },
+    { key: "orchestrator", name: "Guardian", desc: "Plans and decides", icon: "shield", color: "#2563eb" },
+    { key: "weather", name: "Weather", desc: "Checks forecasts", icon: "cloud", color: "#0ea5e9", tool: "weather_risk" },
+    { key: "intel", name: "News & alerts", desc: "Searches the web", icon: "search", color: "#6d4fd8", tool: "web_intel" },
+    { key: "fares", name: "Flights", desc: "Finds alternatives", icon: "plane", color: "#0d9488", tool: "fare_search" },
+    { key: "scoring", name: "Compare", desc: "Ranks every option", icon: "scale", color: "#475467", tool: "rank_options", model: "Deterministic code" },
+    { key: "comms", name: "Message", desc: "Drafts a note to your host", icon: "mail", color: "#db2777", tool: "draft_host_message" },
   ];
+
+  // Plain-language progress for the traveller; raw events go to the technical log.
+  const FRIENDLY = {
+    get_commitment: { doing: "Reading your meeting details", done: () => "Deadline and what's at stake confirmed" },
+    weather_risk: { doing: "Checking the weather along your route", done: () => weatherSummary() },
+    web_intel: { doing: "Searching the web for delays and travel alerts", done: () => (sourceCount ? `${sourceCount} relevant sources found` : "No major alerts found") },
+    fare_search: { doing: "Looking for flights that still get you there in time", done: () => `${Math.max(0, state.ranking.length - 1)} alternatives found` },
+    rank_options: { doing: "Comparing every option on reliability and cost", done: () => bestSummary() },
+    draft_host_message: { doing: "Drafting a note to your meeting host", done: () => "Ready to review below" },
+  };
+  let sourceCount = 0;
+  function weatherSummary() {
+    const worst = state.current_trip.airports
+      .map((a) => [a, state.risks[a]])
+      .filter(([, r]) => r)
+      .sort((a, b) => b[1].disruption_prob - a[1].disruption_prob)[0];
+    if (!worst || worst[1].disruption_prob < 0.2) return "No significant weather on your route";
+    const why = worst[1].reason.replace(/^\[sample\]\s*/, "").split(":")[0];
+    return `${worst[0]} has a ${pct(worst[1].disruption_prob)} chance of disruption (${why})`;
+  }
+  function bestSummary() {
+    const p = pick();
+    return p ? `Best option: ${flightNo(p.option)}, ${pct(p.p_on_time)} chance of arriving on time` : "Options ranked";
+  }
   const AGENT_COLOR = {
     "Trip Guardian": "#2563eb", "Weather Risk": "#0ea5e9", "Web Intel": "#6d4fd8",
     "Fare Search": "#0d9488", Comms: "#db2777", "Key pool": "#d97706", MCP: "#6d4fd8",
@@ -124,10 +149,10 @@
     const routing = state.routing || {};
     $("#pipeline").innerHTML = STEPS.map((s) => {
       const model = s.model || (routing[s.key] || "").split(":").slice(1).join(":") || "";
-      return `<li class="step" id="step-${s.key}">
+      return `<li class="step" id="step-${s.key}" title="${esc(model ? `Runs on ${model}` : "")}">
         <span class="step-icon" data-icon="${s.icon}">${svgIcon(s.icon)}</span>
         <span class="step-name">${esc(s.name)}</span>
-        <span class="step-meta">${esc(model)}</span>
+        <span class="step-meta">${esc(s.desc)}</span>
       </li>`;
     }).join("");
   }
@@ -340,7 +365,28 @@
     toast._t = setTimeout(() => t.classList.remove("show"), 8000);
   }
 
-  // ---------- activity + run ----------
+  // ---------- friendly progress ----------
+  const progItems = {};
+  function progStart(key, text) {
+    const list = $("#progress");
+    list.querySelector(".empty")?.remove();
+    if (progItems[key]) return;
+    const li = document.createElement("li");
+    li.className = "prog working";
+    li.innerHTML = `<span class="prog-icon"></span><span class="prog-text">${esc(text)}<span class="prog-detail"></span></span><span class="prog-t"></span>`;
+    list.appendChild(li);
+    progItems[key] = li;
+  }
+  function progDone(key, detail, status = "done") {
+    const li = progItems[key];
+    if (!li) return;
+    li.className = `prog ${status}`;
+    li.querySelector(".prog-icon").innerHTML = svgIcon(status === "done" ? "check" : "close");
+    li.querySelector(".prog-detail").textContent = detail || "";
+    li.querySelector(".prog-t").textContent = `${((performance.now() - t0) / 1000).toFixed(0)}s`;
+  }
+
+  // ---------- technical log + run ----------
   let t0 = 0, count = 0;
   function act(type, agent, html) {
     const list = $("#activity");
@@ -361,7 +407,7 @@
     box.querySelector(".empty")?.remove();
     const safe = (u) => (/^https?:\/\//i.test(u) ? u : "#");
     box.insertAdjacentHTML("beforeend",
-      (query ? `<div class="ev-query">${svgIcon("search")}<span>Exa search: <b>${esc(query)}</b></span></div>` : "") +
+      (query ? `<div class="ev-query">${svgIcon("search")}<span>Searched for <b>${esc(query)}</b></span></div>` : "") +
       items.map((s, i) => `<a class="ev-card" href="${esc(safe(s.url))}" target="_blank" rel="noopener noreferrer" style="animation-delay:${i * 50}ms">
         <span class="ev-top"><span class="ev-fav">${esc((s.domain || "?")[0])}</span><span class="ev-domain">${esc(s.domain)}</span><span class="ev-date">${esc(s.published || "")}</span></span>
         <span class="ev-title">${esc(s.title)}</span></a>`).join(""));
@@ -373,24 +419,35 @@
         if (ev.agent === "Trip Guardian") setStep("orchestrator", "running");
         break;
       case "tool_called": {
+        const top = ev.agent === "Trip Guardian";
         const step = TOOL_STEP[ev.tool];
-        if (step && ev.agent === "Trip Guardian") setStep(step, "running");
+        if (step && top) setStep(step, "running");
+        if (top && FRIENDLY[ev.tool]) progStart(ev.tool, FRIENDLY[ev.tool].doing);
         act("call", ev.agent, `called <code>${esc(ev.tool)}</code>${more("Arguments", ev.args)}`);
         break;
       }
       case "tool_output": {
+        const top = ev.agent === "Trip Guardian";
         const step = TOOL_STEP[ev.tool];
-        if (step && ev.agent === "Trip Guardian") setStep(step, "done");
+        if (step && top) setStep(step, "done");
+        if (top && FRIENDLY[ev.tool]) progDone(ev.tool, FRIENDLY[ev.tool].done());
         if (ev.tool === "draft_host_message") { $("#host-msg").value = ev.output; $("#copy-host").disabled = false; }
         act("result", ev.agent, `got result from <code>${esc(ev.tool)}</code>${more("Output", ev.output)}`);
         break;
       }
       case "system": act("warn", ev.agent, esc(ev.text)); break;
-      case "sources": addSources(ev.query, ev.items); break;
-      case "error": act("error", "Error", esc(ev.text)); break;
+      case "sources": sourceCount += ev.items.length; addSources(ev.query, ev.items); break;
+      case "error":
+        act("error", "Error", esc(ev.text));
+        progStart("error", "Something went wrong");
+        progDone("error", "Try running again. The technical log has the details.", "failed");
+        break;
       case "final":
         setStep("orchestrator", "done");
         $("#brief").innerHTML = DOMPurify.sanitize(marked.parse(ev.text || ""));
+        progStart("final", "Your recommendation is ready");
+        progDone("final", "Review it at the top of the page, then book or keep your flight.");
+        progItems.final.classList.add("final");
         act("result", "Trip Guardian", "recommendation ready, waiting for your approval");
         break;
     }
@@ -398,10 +455,13 @@
 
   function run() {
     if (running) return;
-    running = true; t0 = performance.now(); count = 0;
+    running = true; t0 = performance.now(); count = 0; sourceCount = 0;
     $("#activity").innerHTML = "";
-    $("#evidence").innerHTML = '<p class="empty">Waiting for the Web Intel agent…</p>';
-    $("#brief").innerHTML = '<p class="empty">Agents are working…</p>';
+    $("#progress").innerHTML = "";
+    for (const k of Object.keys(progItems)) delete progItems[k];
+    $("#progress-time").textContent = "Working…";
+    $("#evidence").innerHTML = '<p class="empty">Searching news and travel alerts…</p>';
+    $("#brief").innerHTML = '<p class="empty">Working on your recommendation…</p>';
     STEPS.forEach((s) => setStep(s.key, null));
     setRunStatus("Running", "running");
     const btn = $("#engage");
@@ -416,8 +476,12 @@
       btn.disabled = false; btn.classList.remove("running");
       $("#engage-label").textContent = "Run again";
       setRunStatus(ok ? "Complete" : "Failed", ok ? "done" : "failed");
+      $("#progress-time").textContent = ok ? `Finished in ${((performance.now() - t0) / 1000).toFixed(0)}s` : "Stopped";
+      for (const li of Object.values(progItems)) {
+        if (li.classList.contains("working")) li.className = ok ? "prog done" : "prog failed"; // close any open spinner
+      }
       if (!ok && !$("#brief").querySelector("h1,h2,h3,ul,p:not(.empty)")) {
-        $("#brief").innerHTML = '<p class="empty">The run stopped before a recommendation. The activity log has details.</p>';
+        $("#brief").innerHTML = '<p class="empty">The run stopped before a recommendation. The technical log has details.</p>';
       }
       if (ok) await refresh(); // live fares may have been re-fetched during the run
     };

@@ -190,7 +190,29 @@ table.options { width: 100%; border-collapse: separate; border-spacing: 0; font-
 .table-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; flex-wrap: wrap; font-size: 14px; }
 .table-foot b { color: var(--ink); }
 
-/* ---------- Activity ---------- */
+/* ---------- Progress (friendly feed) ---------- */
+.progress { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.prog { display: grid; grid-template-columns: 24px 1fr auto; gap: 12px; align-items: start; padding: 10px 4px; animation: fade 0.25s ease both; }
+.prog + .prog { border-top: 1px solid var(--line-2); }
+.prog-icon { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; margin-top: 1px; }
+.prog-icon svg { width: 13px; height: 13px; fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.prog.working .prog-icon { border: 2.5px solid var(--blue-100); border-top-color: var(--blue); animation: spin 0.8s linear infinite; }
+.prog.done .prog-icon { background: var(--green); }
+.prog.failed .prog-icon { background: var(--red); }
+.prog-text { font-size: 14px; font-weight: 550; color: var(--ink); }
+.prog-detail { display: block; font-size: 13px; font-weight: 400; color: var(--ink-2); margin-top: 2px; }
+.prog-t { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; padding-top: 2px; }
+.prog.final .prog-text { color: var(--blue-600); }
+.techlog { margin-top: 14px; border-top: 1px solid var(--line-2); padding-top: 12px; }
+.techlog > summary { cursor: pointer; font-size: 13px; font-weight: 550; color: var(--ink-3); list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+.techlog > summary::-webkit-details-marker { display: none; }
+.techlog > summary::before { content: "›"; display: inline-block; transition: transform 0.15s; font-size: 15px; }
+.techlog[open] > summary::before { transform: rotate(90deg); }
+.techlog > summary:hover { color: var(--ink-2); }
+.techlog .activity { margin-top: 10px; max-height: 320px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Activity (technical log) ---------- */
 .activity { list-style: none; margin: 0; padding: 0; max-height: 470px; overflow-y: auto; display: grid; gap: 2px; scrollbar-width: thin; }
 .act { display: grid; grid-template-columns: 10px 1fr auto; gap: 10px; align-items: start; padding: 8px 4px; border-radius: 8px; animation: fade 0.25s ease both; font-size: 13.5px; }
 .act:hover { background: #fafbfc; }

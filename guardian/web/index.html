@@ -79,7 +79,7 @@
     <!-- Pipeline -->
     <section class="card pipeline-card">
       <div class="card-head">
-        <h3>Agent pipeline</h3>
+        <h3>How the guardian checks your trip</h3>
         <span class="status-chip" id="run-status">Idle</span>
       </div>
       <ol class="pipeline" id="pipeline"></ol>
@@ -89,7 +89,7 @@
     <section class="grid-2">
       <div class="card map-card">
         <div class="card-head">
-          <h3>Route risk</h3>
+          <h3>Your route options</h3>
           <div class="legend">
             <span><i class="lg lg-cur"></i>Current booking</span>
             <span><i class="lg lg-pick"></i>Recommended</span>
@@ -109,14 +109,14 @@
       <div class="card" id="options">
         <div class="card-head">
           <h3>Options</h3>
-          <span class="muted small">Ranked by expected loss: (1 − on-time chance) × stakes + fare</span>
+          <span class="muted small">Best first: weighs your chance of arriving on time against the price</span>
         </div>
         <div class="table-wrap">
           <table class="options">
             <thead>
               <tr>
                 <th>Flight</th><th>Route</th><th>Departs</th><th>Arrives</th>
-                <th>On-time chance</th><th class="num">Price</th><th class="num">Expected loss</th><th></th>
+                <th>On-time chance</th><th class="num">Price</th><th class="num" title="What this option is likely to cost you overall: the fare plus the value of the meeting times the chance you miss it. Lower is better.">Risk-adjusted cost</th><th></th>
               </tr>
             </thead>
             <tbody id="options-body"></tbody>
@@ -132,18 +132,22 @@
     <!-- Activity + evidence -->
     <section class="grid-2 grid-2-act">
       <div class="card activity-card">
-        <div class="card-head"><h3>Activity</h3><span class="muted small" id="activity-count"></span></div>
-        <ol class="activity" id="activity">
-          <li class="empty">Run the guardian to see each agent and tool call as it happens.</li>
+        <div class="card-head"><h3>Progress</h3><span class="muted small" id="progress-time"></span></div>
+        <ol class="progress" id="progress">
+          <li class="empty">Run the guardian and it will walk you through what it checks.</li>
         </ol>
+        <details class="techlog">
+          <summary>Technical log <span id="activity-count"></span></summary>
+          <ol class="activity" id="activity"></ol>
+        </details>
       </div>
       <div class="card">
         <div class="card-head">
-          <h3>Web evidence</h3>
+          <h3>What the news says</h3>
           <span class="pill pill-violet">Searched with Exa</span>
         </div>
         <div class="evidence" id="evidence">
-          <p class="empty">Sources the Web Intel agent finds appear here.</p>
+          <p class="empty">News and travel alerts the guardian finds appear here.</p>
         </div>
       </div>
     </section>
@@ -151,19 +155,19 @@
     <!-- Brief + message -->
     <section class="grid-2 grid-2-even">
       <div class="card">
-        <div class="card-head"><h3>Guardian brief</h3></div>
-        <article class="prose" id="brief"><p class="empty">The full reasoning, with evidence, appears here after a run.</p></article>
+        <div class="card-head"><h3>Why we recommend this</h3></div>
+        <article class="prose" id="brief"><p class="empty">A plain explanation of the recommendation appears here after a run.</p></article>
       </div>
       <div class="card">
         <div class="card-head">
           <h3>Message to host</h3>
           <button class="btn btn-ghost btn-sm" id="copy-host" disabled>Copy</button>
         </div>
-        <textarea id="host-msg" class="host-msg" placeholder="Drafted by the Comms agent during a run. Edit before sending." spellcheck="true"></textarea>
+        <textarea id="host-msg" class="host-msg" placeholder="The guardian drafts this during a run. Edit it before sending." spellcheck="true"></textarea>
       </div>
     </section>
 
-    <footer class="foot">Scoring is deterministic code; language models only gather evidence and explain. Nothing is booked without your approval.</footer>
+    <footer class="foot">Rankings come from transparent math; AI only gathers evidence and explains it. Nothing is booked without your approval.</footer>
   </main>
 
   <dialog id="confirm" class="dialog">
