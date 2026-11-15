@@ -1,6 +1,6 @@
 """Agent graph: an orchestrator that calls specialist agents as tools (parallel fan-out)."""
 
-from agents import Agent
+from agents import Agent, RunHooks
 from agents.mcp import MCPServer
 
 from guardian import tools
@@ -8,7 +8,11 @@ from guardian.config import settings
 from guardian.models import model_for, model_settings
 
 
-def build_agents(mcp: dict[str, MCPServer] | None = None) -> Agent:
+def build_agents(
+    mcp: dict[str, MCPServer] | None = None,
+    hooks: RunHooks | None = None,
+) -> Agent:
+    """Build the agent graph. `hooks` also run inside sub-agents, so the UI sees their tool calls."""
     mcp = mcp or {}
     live = settings().data_mode == "live"
 
@@ -57,8 +61,9 @@ def build_agents(mcp: dict[str, MCPServer] | None = None) -> Agent:
         model=model_for("comms"),
         model_settings=model_settings(),
         instructions=(
-            "Draft a brief, professional message to the meeting host. State the disruption, the new "
-            "plan and ETA, and offer a video fallback if arrival is uncertain. Under 90 words."
+            "Draft a brief, professional message to the meeting host. Describe the disruption "
+            "accurately, including its real severity (never downplay a blizzard as 'minor'), then "
+            "the new plan and ETA, and offer a video fallback if arrival is uncertain. Under 90 words."
         ),
     )
 
@@ -79,9 +84,25 @@ def build_agents(mcp: dict[str, MCPServer] | None = None) -> Agent:
         tools=[
             tools.get_commitment,
             tools.rank_options,
-            weather.as_tool("weather_risk", "Assess weather disruption risk on the current trip."),
-            intel.as_tool("web_intel", "Search the live web for disruption evidence with sources."),
-            fares.as_tool("fare_search", "Find alternative itineraries before the deadline."),
-            comms.as_tool("draft_host_message", "Draft a message to the meeting host."),
+            weather.as_tool(
+                "weather_risk",
+                "Assess weather disruption risk on the current trip.",
+                hooks=hooks,
+            ),
+            intel.as_tool(
+                "web_intel",
+                "Search the live web for disruption evidence with sources.",
+                hooks=hooks,
+            ),
+            fares.as_tool(
+                "fare_search",
+                "Find alternative itineraries before the deadline.",
+                hooks=hooks,
+            ),
+            comms.as_tool(
+                "draft_host_message",
+                "Draft a message to the meeting host.",
+                hooks=hooks,
+            ),
         ],
     )

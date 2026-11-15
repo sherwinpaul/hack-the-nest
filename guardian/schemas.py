@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class Commitment(BaseModel):
@@ -33,10 +33,12 @@ class TravelOption(BaseModel):
     source: str  # kiwi | duffel | google_flights | fixture
     booking_ref: str = ""  # Duffel offer id or deep link
 
+    @computed_field
     @property
     def airports(self) -> list[str]:
         return [self.legs[0].origin] + [leg.destination for leg in self.legs]
 
+    @computed_field
     @property
     def arrive(self) -> datetime:
         return self.legs[-1].arrive
